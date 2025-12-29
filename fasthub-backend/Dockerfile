@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Ustawienie katalogu roboczego
 WORKDIR /app
 
-# Instalacja zależności systemowych (potrzebne dla niektórych bibliotek Python )
+# Instalacja zależności systemowych (potrzebne dla niektórych bibliotek Python)
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     gcc \
@@ -19,8 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopiowanie całego kodu backendu
 COPY . .
 
-# Port na którym działa backend
+# Port na którym działa backend (Railway automatycznie ustawi $PORT)
 EXPOSE 8000
 
-# Komenda uruchamiająca backend (z auto-reload dla development)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Skrypt startowy dla produkcji
+# Railway automatycznie przekaże zmienne środowiskowe do kontenera
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -95,4 +95,14 @@ class Settings(BaseSettings):
         extra = "allow"
 
 
-settings = Settings()
+_settings = None
+
+def get_settings() -> Settings:
+    """Lazy load settings to ensure environment variables are available at runtime"""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
+
+# Backward compatibility - settings will be loaded on first access
+settings = get_settings()

@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # Import models and settings
-from app.core.config import settings
+from app.core.config import get_settings
 from app.db.session import Base
 from app.models import *  # Import all models
 
@@ -25,6 +25,8 @@ def get_sync_database_url(url: str) -> str:
     return url
 
 # Set SQLAlchemy URL
+# Lazy load settings to ensure env vars are available
+settings = get_settings()
 config.set_main_option("sqlalchemy.url", get_sync_database_url(settings.DATABASE_URL))
 
 # Add your model's MetaData object here for 'autogenerate' support
@@ -52,6 +54,7 @@ def run_migrations_online() -> None:
     """Run migrations in 'online' mode"""
     
     configuration = config.get_section(config.config_ini_section)
+    settings = get_settings()
     configuration["sqlalchemy.url"] = get_sync_database_url(settings.DATABASE_URL)
     
     connectable = engine_from_config(

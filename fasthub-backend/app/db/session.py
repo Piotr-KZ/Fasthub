@@ -6,7 +6,7 @@ Async SQLAlchemy session factory for PostgreSQL
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 
-from app.core.config import settings
+from app.core.config import get_settings
 
 
 def get_async_database_url(url: str) -> str:
@@ -21,25 +21,45 @@ def get_async_database_url(url: str) -> str:
     return url
 
 
-# Create async engine for PostgreSQL
-engine = create_async_engine(
-    get_async_database_url(settings.DATABASE_URL),
-    echo=settings.DEBUG,
-    future=True,
-    pool_pre_ping=True,
-    pool_size=20,  # Connection pool size
-    max_overflow=10,  # Extra connections if pool full
-    pool_recycle=3600,  # Recycle connections after 1 hour
-)
+# Lazy initialization - engine will be created on first access
+_engine = None
+_async_session_local = None
 
-# Create async session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+
+def get_engine():
+    """Get or create the database engine"""
+    global _engine
+    if _engine is None:
+        settings = get_settings()
+        _engine = create_async_engine(
+            get_async_database_url(settings.DATABASE_URL),
+            echo=settings.DEBUG,
+            future=True,
+            pool_pre_ping=True,
+            pool_size=20,  # Connection pool size
+            max_overflow=10,  # Extra connections if pool full
+            pool_recycle=3600,  # Recycle connections after 1 hour
+        )
+    return _engine
+
+
+def get_async_session_local():
+    """Get or create the async session factory"""
+    global _async_session_local
+    if _async_session_local is None:
+        _async_session_local = async_sessionmaker(
+            get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autocommit=False,
+            autoflush=False,
+        )
+    return _async_session_local
+
+
+# Backward compatibility
+engine = property(lambda self: get_engine())
+AsyncSessionLocal = property(lambda self: get_async_session_local())
 
 # Base class for models
 Base = declarative_base()
@@ -50,7 +70,8 @@ async def get_db() -> AsyncSession:
     Dependency for getting async database session
     Usage: db: AsyncSession = Depends(get_db)
     """
-    async with AsyncSessionLocal() as session:
+    session_local = get_async_session_local()
+    async with session_local() as session:
         try:
             yield session
             await session.commit()

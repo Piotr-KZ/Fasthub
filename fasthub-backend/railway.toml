@@ -3,7 +3,11 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
+
+[deploy.env]
+DATABASE_URL = "postgresql://postgres:PyXKmgfgXWmucUHAEGYnsoKMknFEbJQfVE@turntable.proxy.rlwy.net:43092/railway"
+BACKEND_CORS_ORIGINS = "https://frontend-production-4c8b.up.railway.app"

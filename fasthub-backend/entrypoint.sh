@@ -1,6 +1,15 @@
 #!/bin/bash
 set -e
 
+# Decode Base64 encoded variables if they exist
+if [ -n "$DATABASE_URL_BASE64" ]; then
+    DATABASE_URL=$(echo "$DATABASE_URL_BASE64" | base64 -d)
+fi
+
+if [ -n "$BACKEND_CORS_ORIGINS_BASE64" ]; then
+    BACKEND_CORS_ORIGINS=$(echo "$BACKEND_CORS_ORIGINS_BASE64" | base64 -d)
+fi
+
 # Generate .env file from environment variables
 echo "Generating .env file from Railway environment variables..."
 cat > /app/.env << EOF

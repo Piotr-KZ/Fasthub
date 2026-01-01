@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    BACKEND_CORS_ORIGINS: List[str] = []
     ALLOWED_HOSTS: List[str] = ["*"]  # Restrict in production
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")

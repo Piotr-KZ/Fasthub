@@ -162,7 +162,7 @@ export default function AppLayout() {
             )}
           </div>
           
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" trigger={['click']}>
             <Space style={{ cursor: 'pointer' }}>
               <Avatar icon={<UserOutlined />} />
               <Text>{user?.full_name || user?.email}</Text>

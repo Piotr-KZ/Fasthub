@@ -20,8 +20,11 @@ export default function DashboardPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    // Only fetch if user is authenticated
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -59,7 +62,13 @@ export default function DashboardPage() {
         }
       }
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load dashboard data');
+      const errorMsg = err.response?.data?.detail || 'Failed to load dashboard data';
+      console.error('Dashboard error:', errorMsg);
+      setError(errorMsg);
+      // Don't retry on 403/404 errors
+      if (err.response?.status === 403 || err.response?.status === 404) {
+        console.warn('API endpoint not available or forbidden');
+      }
     } finally {
       setLoading(false);
     }

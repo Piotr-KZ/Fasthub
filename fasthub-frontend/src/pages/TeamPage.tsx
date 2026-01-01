@@ -23,7 +23,12 @@ export default function TeamPage() {
       const { data } = await usersApi.list({ per_page: 100 });
       setMembers(data.items || []);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || 'Failed to fetch team members');
+      const errorMsg = error.response?.data?.detail || 'Failed to fetch team members';
+      console.error('TeamPage error:', errorMsg);
+      // Don't show error message on 403 (user not authenticated)
+      if (error.response?.status !== 403) {
+        message.error(errorMsg);
+      }
     } finally {
       setLoading(false);
     }

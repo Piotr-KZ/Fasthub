@@ -30,7 +30,12 @@ export default function UsersPage() {
       setUsers(data.items || []);
       setTotal(data.total || 0);
     } catch (error: any) {
-      message.error(error.response?.data?.detail || 'Failed to fetch users');
+      const errorMsg = error.response?.data?.detail || 'Failed to fetch users';
+      console.error('UsersPage error:', errorMsg);
+      // Don't show error message on 403 (user not authenticated)
+      if (error.response?.status !== 403) {
+        message.error(errorMsg);
+      }
     } finally {
       setLoading(false);
     }

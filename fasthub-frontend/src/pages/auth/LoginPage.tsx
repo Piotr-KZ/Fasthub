@@ -41,7 +41,7 @@ export default function LoginPage() {
 
         {error && (
           <Alert
-            message={error}
+            message={typeof error === 'string' ? error : 'Login failed. Please try again.'}
             type="error"
             closable
             onClose={clearError}

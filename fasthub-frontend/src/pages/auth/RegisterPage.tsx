@@ -48,7 +48,7 @@ export default function RegisterPage() {
 
         {error && (
           <Alert
-            message={error}
+            message={typeof error === 'string' ? error : 'Registration failed. Please try again.'}
             type="error"
             closable
             onClose={clearError}

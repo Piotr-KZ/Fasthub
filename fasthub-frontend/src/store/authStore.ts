@@ -91,28 +91,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   fetchCurrentUser: async () => {
+    console.error('[DEBUG] fetchCurrentUser called');
     const token = localStorage.getItem('access_token');
+    console.error('[DEBUG] token exists:', !!token);
     if (!token) {
       set({ isAuthenticated: false, isLoading: false });
       return;
     }
 
+    console.error('[DEBUG] setting isLoading=true');
     set({ isLoading: true });
     try {
+      console.error('[DEBUG] calling authApi.getCurrentUser()');
       const { data: user } = await authApi.getCurrentUser();
+      console.error('[DEBUG] got user:', user);
       const currentUser = get().user;
       
       // Only update if user actually changed (prevent unnecessary re-renders)
       if (!currentUser || currentUser.id !== user.id) {
+        console.error('[DEBUG] setting user, isAuthenticated=true, isLoading=false');
         set({ 
           user, 
           isAuthenticated: true, 
           isLoading: false 
         });
       } else {
+        console.error('[DEBUG] user unchanged, setting isLoading=false');
         set({ isLoading: false });
       }
     } catch (error) {
+      console.error('[DEBUG] fetchCurrentUser error:', error);
       // Token invalid, clear auth
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');

@@ -21,12 +21,13 @@ const { Text } = Typography;
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout, fetchCurrentUser } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    fetchCurrentUser();
-  }, []);
+    // Fetch current user only once on mount
+    useAuthStore.getState().fetchCurrentUser();
+  }, []); // Empty dependency array is safe here because we use getState()
 
   const handleLogout = async () => {
     await logout();

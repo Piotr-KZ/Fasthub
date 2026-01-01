@@ -24,10 +24,7 @@ export default function AppLayout() {
   const { user, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  useEffect(() => {
-    // Fetch current user only once on mount
-    useAuthStore.getState().fetchCurrentUser();
-  }, []); // Empty dependency array is safe here because we use getState()
+  // Auth init moved to App.tsx - no need to fetch here
 
   const handleLogout = async () => {
     await logout();

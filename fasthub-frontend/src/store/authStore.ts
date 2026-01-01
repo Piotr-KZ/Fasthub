@@ -98,6 +98,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isAuthenticated: false, isLoading: false });
       return;
     }
+    
+    // GUARD: Prevent multiple simultaneous calls
+    const currentState = get();
+    if (currentState.isLoading) {
+      console.error('[DEBUG] already loading, skipping');
+      return;
+    }
 
     console.error('[DEBUG] setting isLoading=true');
     set({ isLoading: true });

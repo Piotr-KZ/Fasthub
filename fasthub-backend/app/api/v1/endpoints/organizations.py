@@ -14,10 +14,43 @@ from app.core.dependencies import (
 from app.db.session import get_db
 from app.models.organization import Organization
 from app.models.user import User
-from app.schemas.organization import OrganizationComplete, OrganizationResponse, OrganizationUpdate, OrganizationWithStats
+from app.schemas.organization import OrganizationComplete, OrganizationCreate, OrganizationResponse, OrganizationUpdate, OrganizationWithStats
 from app.services.organization_service import OrganizationService
 
 router = APIRouter()
+
+
+@router.post("/", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+async def create_organization(
+    org_data: OrganizationCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create organization for current user
+
+    User must not already have an organization.
+    User becomes the owner of the new organization.
+    """
+    if current_user.organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User already has an organization"
+        )
+
+    org_service = OrganizationService(db)
+    org = await org_service.create_organization(
+        name=org_data.name,
+        owner_id=current_user.id,
+    )
+    
+    # Update user's organization_id
+    current_user.organization_id = org.id
+    db.add(current_user)
+    await db.commit()
+    await db.refresh(org)
+    
+    return org
 
 
 @router.get("/me", response_model=OrganizationWithStats)

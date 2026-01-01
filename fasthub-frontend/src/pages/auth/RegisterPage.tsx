@@ -23,7 +23,7 @@ export default function RegisterPage() {
       };
 
       await register(registerData);
-      navigate('/dashboard');
+      navigate('/onboarding');
     } catch (err) {
       console.error('Registration failed:', err);
     } finally {

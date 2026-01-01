@@ -64,7 +64,9 @@ app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
 # ===== 1. CORS (MUST BE FIRST MIDDLEWARE!) =====
 # CRITICAL: CORS middleware must be added BEFORE any other middleware
 # to properly handle OPTIONS preflight requests
-origins = [
+
+# Use BACKEND_CORS_ORIGINS from settings, fallback to localhost for development
+origins = settings.BACKEND_CORS_ORIGINS if settings.BACKEND_CORS_ORIGINS else [
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",
@@ -73,7 +75,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Hardcoded for development (change in production)
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, OPTIONS, etc.)
     allow_headers=["*"],  # Allow all headers

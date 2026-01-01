@@ -67,6 +67,7 @@ class UserRepository:
         """Update user"""
         self.db.add(user)
         await self.db.flush()
+        await self.db.commit()  # FIX: Commit changes to database
         await self.db.refresh(user)
         return user
 

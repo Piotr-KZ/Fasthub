@@ -41,25 +41,16 @@ export default function DashboardPage() {
         setStats(statsRes.data);
         setRecentUsers(usersRes.data);
       } else {
-        // Regular user dashboard - get users count and organization
-        const [usersRes, orgRes] = await Promise.all([
-          usersApi.list({ per_page: 10 }),
-          organizationsApi.getCurrent(),
-        ]);
-        
+        // Regular user dashboard - show basic welcome screen
+        // Note: /api/v1/users/ requires admin permissions
+        // Note: /api/v1/organizations/me endpoint doesn't exist yet
         setStats({
-          total_users: usersRes.data.total,
-          total_organizations: 1,
-          total_subscriptions: 1,
-          active_subscriptions: 1,
+          total_users: 0,
+          total_organizations: 0,
+          total_subscriptions: 0,
+          active_subscriptions: 0,
         });
-        setRecentUsers(usersRes.data.items || []);
-        setOrganization(orgRes.data);
-
-        // Show onboarding modal if organization is not complete
-        if (orgRes.data && !orgRes.data.is_complete) {
-          setShowOnboarding(true);
-        }
+        setRecentUsers([]);
       }
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Failed to load dashboard data';

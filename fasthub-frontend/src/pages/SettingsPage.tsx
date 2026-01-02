@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const [orgForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
+  const [isEditingOrg, setIsEditingOrg] = useState(false);
 
   useEffect(() => {
     fetchOrganization();
@@ -83,6 +84,7 @@ export default function SettingsPage() {
     try {
       await updateOrganization(values);
       message.success('Organization updated successfully');
+      setIsEditingOrg(false);
     } catch (error: any) {
       message.error(error.response?.data?.detail || 'Failed to update organization');
     } finally {
@@ -227,136 +229,160 @@ export default function SettingsPage() {
       label: 'Organization',
       children: (
         <Card>
-          <Title level={4}>Organization Information</Title>
-          <Paragraph type="secondary">Manage your organization details</Paragraph>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <Title level={4} style={{ marginBottom: 0 }}>Organization Information</Title>
+              <Paragraph type="secondary" style={{ marginBottom: 0 }}>Manage your organization details</Paragraph>
+            </div>
+            {!isEditingOrg && organization && (
+              <Button type="primary" onClick={() => setIsEditingOrg(true)}>
+                Edit
+              </Button>
+            )}
+          </div>
           
-          <Form
-            form={orgForm}
-            layout="vertical"
-            onFinish={handleOrgUpdate}
-            style={{ maxWidth: 600 }}
-          >
-            <Form.Item
-              name="name"
-              label="Organization Name"
-              rules={[{ required: true, message: 'Please input organization name!' }]}
+          {!isEditingOrg && organization ? (
+            <div style={{ maxWidth: 600 }}>
+              <Divider orientation="left">Basic Information</Divider>
+              <p><strong>Organization Name:</strong> {organization.name}</p>
+              <p><strong>Email:</strong> {organization.email}</p>
+              <p><strong>Phone:</strong> {organization.phone || 'Not provided'}</p>
+              <p><strong>NIP (Tax ID):</strong> {organization.nip || 'Not provided'}</p>
+              
+              <Divider orientation="left">Billing Address</Divider>
+              <p><strong>Street:</strong> {organization.billing_street}</p>
+              <p><strong>City:</strong> {organization.billing_city}</p>
+              <p><strong>Postal Code:</strong> {organization.billing_postal_code}</p>
+              <p><strong>Country:</strong> {organization.billing_country}</p>
+            </div>
+          ) : (
+            <Form
+              form={orgForm}
+              layout="vertical"
+              onFinish={handleOrgUpdate}
+              style={{ maxWidth: 600 }}
             >
-              <Input prefix={<BankOutlined />} />
-            </Form.Item>
-
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { required: true, message: 'Please input email!' },
-                { type: 'email', message: 'Please enter a valid email!' }
-              ]}
-            >
-              <Input prefix={<MailOutlined />} />
-            </Form.Item>
-
-            <Form.Item 
-              name="phone" 
-              label="Phone"
-              rules={[
-                {
-                  pattern: /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
-                  message: 'Please enter a valid phone number!'
-                }
-              ]}
-            >
-              <Input prefix={<PhoneOutlined />} placeholder="+48 123 456 789" />
-            </Form.Item>
-
-            <Form.Item 
-              name="nip" 
-              label="NIP (Tax ID)"
-              rules={[
-                {
-                  pattern: /^[0-9]{10}$/,
-                  message: 'NIP must be exactly 10 digits!'
-                }
-              ]}
-            >
-              <Input placeholder="1234567890" maxLength={10} />
-            </Form.Item>
-
-            <Divider>Billing Address</Divider>
-
-            <Form.Item
-              name="billing_street"
-              label="Street"
-              rules={[
-                { required: true, message: 'Please input street!' },
-                { min: 2, message: 'Street must be at least 2 characters!' }
-              ]}
-            >
-              <Input placeholder="ul. Przykładowa 123" />
-            </Form.Item>
-
-            <Space style={{ display: 'flex' }}>
               <Form.Item
-                name="billing_city"
-                label="City"
-                rules={[
-                  { required: true, message: 'Required!' },
-                  { min: 2, message: 'City must be at least 2 characters!' }
-                ]}
-                style={{ flex: 1 }}
+                name="name"
+                label="Organization Name"
+                rules={[{ required: true, message: 'Please input organization name!' }]}
               >
-                <Input placeholder="Kraków" />
+                <Input prefix={<BankOutlined />} />
               </Form.Item>
 
               <Form.Item
-                name="billing_postal_code"
-                label="Postal Code"
+                name="email"
+                label="Email"
                 rules={[
-                  { required: true, message: 'Required!' },
+                  { required: true, message: 'Please input email!' },
+                  { type: 'email', message: 'Please enter a valid email!' }
+                ]}
+              >
+                <Input prefix={<MailOutlined />} />
+              </Form.Item>
+
+              <Form.Item 
+                name="phone" 
+                label="Phone"
+                rules={[
                   {
-                    pattern: /^[0-9]{2}-[0-9]{3}$/,
-                    message: 'Format: XX-XXX (e.g., 30-001)'
+                    pattern: /^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
+                    message: 'Please enter a valid phone number!'
                   }
                 ]}
-                style={{ flex: 1 }}
               >
-                <Input placeholder="30-001" maxLength={6} />
+                <Input prefix={<PhoneOutlined />} placeholder="+48 123 456 789" />
               </Form.Item>
-            </Space>
 
-            <Form.Item
-              name="billing_country"
-              label="Country"
-              rules={[{ required: true, message: 'Please select country!' }]}
-            >
-              <Select
-                showSearch
-                placeholder="Select a country"
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                options={[
-                  { value: 'Polska', label: 'Polska' },
-                  { value: 'Germany', label: 'Germany' },
-                  { value: 'United Kingdom', label: 'United Kingdom' },
-                  { value: 'France', label: 'France' },
-                  { value: 'Spain', label: 'Spain' },
-                  { value: 'Italy', label: 'Italy' },
-                  { value: 'Netherlands', label: 'Netherlands' },
-                  { value: 'Belgium', label: 'Belgium' },
-                  { value: 'Austria', label: 'Austria' },
-                  { value: 'Switzerland', label: 'Switzerland' },
-                  { value: 'Czech Republic', label: 'Czech Republic' },
-                  { value: 'Slovakia', label: 'Slovakia' },
-                  { value: 'Hungary', label: 'Hungary' },
-                  { value: 'Romania', label: 'Romania' },
-                  { value: 'Bulgaria', label: 'Bulgaria' },
-                  { value: 'United States', label: 'United States' },
-                  { value: 'Canada', label: 'Canada' },
-                  { value: 'Other', label: 'Other' },
+              <Form.Item 
+                name="nip" 
+                label="NIP (Tax ID)"
+                rules={[
+                  {
+                    pattern: /^[0-9]{10}$/,
+                    message: 'NIP must be exactly 10 digits!'
+                  }
                 ]}
-              />
-            </Form.Item>
+              >
+                <Input placeholder="1234567890" maxLength={10} />
+              </Form.Item>
+
+              <Divider>Billing Address</Divider>
+
+              <Form.Item
+                name="billing_street"
+                label="Street"
+                rules={[
+                  { required: true, message: 'Please input street!' },
+                  { min: 2, message: 'Street must be at least 2 characters!' }
+                ]}
+              >
+                <Input placeholder="ul. Przykładowa 123" />
+              </Form.Item>
+
+              <Space style={{ display: 'flex' }}>
+                <Form.Item
+                  name="billing_city"
+                  label="City"
+                  rules={[
+                    { required: true, message: 'Required!' },
+                    { min: 2, message: 'City must be at least 2 characters!' }
+                  ]}
+                  style={{ flex: 1 }}
+                >
+                  <Input placeholder="Kraków" />
+                </Form.Item>
+
+                <Form.Item
+                  name="billing_postal_code"
+                  label="Postal Code"
+                  rules={[
+                    { required: true, message: 'Required!' },
+                    {
+                      pattern: /^[0-9]{2}-[0-9]{3}$/,
+                      message: 'Format: XX-XXX (e.g., 30-001)'
+                    }
+                  ]}
+                  style={{ flex: 1 }}
+                >
+                  <Input placeholder="30-001" maxLength={6} />
+                </Form.Item>
+              </Space>
+
+              <Form.Item
+                name="billing_country"
+                label="Country"
+                rules={[{ required: true, message: 'Please select country!' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="Select a country"
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={[
+                    { value: 'Polska', label: 'Polska' },
+                    { value: 'Germany', label: 'Germany' },
+                    { value: 'United Kingdom', label: 'United Kingdom' },
+                    { value: 'France', label: 'France' },
+                    { value: 'Spain', label: 'Spain' },
+                    { value: 'Italy', label: 'Italy' },
+                    { value: 'Netherlands', label: 'Netherlands' },
+                    { value: 'Belgium', label: 'Belgium' },
+                    { value: 'Austria', label: 'Austria' },
+                    { value: 'Switzerland', label: 'Switzerland' },
+                    { value: 'Czech Republic', label: 'Czech Republic' },
+                    { value: 'Slovakia', label: 'Slovakia' },
+                    { value: 'Hungary', label: 'Hungary' },
+                    { value: 'Romania', label: 'Romania' },
+                    { value: 'Bulgaria', label: 'Bulgaria' },
+                    { value: 'United States', label: 'United States' },
+                    { value: 'Canada', label: 'Canada' },
+                    { value: 'Other', label: 'Other' },
+                  ]}
+                />
+              </Form.Item>
 
               <Form.Item>
                 <Space>

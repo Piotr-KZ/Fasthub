@@ -112,7 +112,8 @@ async def get_current_subscription(
     subscription = result.scalar_one_or_none()
 
     if not subscription:
-        # Return default free plan (mock)
+        # MOCK DATA: Return default free plan (no Stripe integration)
+        # TODO: Replace with real Stripe subscription when Stripe is configured
         return SubscriptionResponse(
             id=None,
             organization_id=org_id,
@@ -140,8 +141,10 @@ async def change_subscription_plan(
     """
     Change subscription plan
 
+    MOCK ENDPOINT: Stripe integration not configured.
     Firebase equivalent: changeSubscriptionPlan
     Only organization owner can change the plan.
+    TODO: Configure Stripe API keys and price IDs for real subscription management.
     """
     # Map plan to Stripe price ID
     price_map = {
@@ -186,9 +189,11 @@ async def cancel_subscription(
     """
     Cancel subscription
 
+    MOCK ENDPOINT: Stripe integration not configured.
     Only organization owner can cancel.
     If at_period_end=True, cancels at end of billing period.
     If at_period_end=False, cancels immediately.
+    TODO: Configure Stripe API keys for real subscription cancellation.
     """
     subscription_service = SubscriptionService(db)
     subscription = await subscription_service.cancel_subscription(

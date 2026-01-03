@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Space, Typography, Modal, Form, Input, Select, message, Tag, Card, Popconfirm, Dropdown } from 'antd';
 import { UserAddOutlined, MoreOutlined, DeleteOutlined, EditOutlined, CrownOutlined } from '@ant-design/icons';
 import { membersApi } from '../api/members';
-import { usersApi } from '../api/users';
-import { MemberWithUser, MemberRole, User } from '../types/models';
+import { MemberWithUser, MemberRole } from '../types/models';
 import { useOrgStore } from '../store/orgStore';
 import { useAuthStore } from '../store/authStore';
 
@@ -25,7 +24,6 @@ interface TeamMemberDisplay {
 
 export default function TeamPage() {
   const [members, setMembers] = useState<TeamMemberDisplay[]>([]);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [inviteModalVisible, setInviteModalVisible] = useState(false);
   const [changeRoleModalVisible, setChangeRoleModalVisible] = useState(false);
@@ -43,7 +41,6 @@ export default function TeamPage() {
   useEffect(() => {
     if (organization) {
       fetchTeamMembers();
-      fetchAllUsers();
     }
   }, [organization]);
 
@@ -80,37 +77,23 @@ export default function TeamPage() {
     }
   };
 
-  const fetchAllUsers = async () => {
-    try {
-      const { data } = await usersApi.list({ per_page: 1000 });
-      setAllUsers(data.items || []);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
-    }
-  };
+
 
   const handleInviteSubmit = async (values: any) => {
     if (!organization) return;
     
     try {
-      // Find selected user's email
-      const selectedUser = allUsers.find(u => u.id === values.user_id);
-      if (!selectedUser) {
-        message.error('Selected user not found');
-        return;
-      }
-      
       await membersApi.invite(organization.id, {
-        email: selectedUser.email,
+        email: values.email,
         role: values.role,
       });
       
-      message.success('Member invited successfully!');
+      message.success('Invitation sent successfully!');
       setInviteModalVisible(false);
       form.resetFields();
       fetchTeamMembers();
     } catch (error: any) {
-      message.error(error.response?.data?.detail || 'Failed to invite member');
+      message.error(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
 
@@ -168,10 +151,7 @@ export default function TeamPage() {
     return currentMember?.role === 'admin';
   };
 
-  const getAvailableUsers = () => {
-    const memberUserIds = new Set(members.map(m => m.user_id));
-    return allUsers.filter(user => !memberUserIds.has(user.id));
-  };
+
 
   const columns = [
     {
@@ -337,22 +317,17 @@ export default function TeamPage() {
           onFinish={handleInviteSubmit}
         >
           <Form.Item
-            name="user_id"
-            label="User"
-            rules={[{ required: true, message: 'Please select a user!' }]}
-            help="Select an existing user to invite to your organization"
+            name="email"
+            label="Email Address"
+            rules={[
+              { required: true, message: 'Please input email address!' },
+              { type: 'email', message: 'Please enter a valid email address!' }
+            ]}
+            help="Enter the email address of the person you want to invite"
           >
-            <Select
-              showSearch
-              placeholder="Select a user to invite"
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={getAvailableUsers().map(user => ({
-                value: user.id,
-                label: `${user.full_name} (${user.email})`,
-              }))}
+            <Input 
+              placeholder="user@example.com"
+              type="email"
             />
           </Form.Item>
 

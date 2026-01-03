@@ -6,7 +6,7 @@ Handles team management: invite, list, remove, and update members
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -130,13 +130,19 @@ async def invite_member(
 )
 async def list_members(
     organization_id: UUID,
+    search: str = Query("", description="Search by name or email"),
+    role: str = Query(None, description="Filter by role (admin/viewer)"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    List all members of an organization.
+    List all members of an organization with search and filter.
     Requires any membership (owner, admin, or viewer).
     Includes owner even if not in members table.
+    
+    Query parameters:
+    - search: Search by name or email (case-insensitive)
+    - role: Filter by role (admin/viewer)
     """
     # Check permissions (any member can view)
     await get_user_org_role(organization_id, current_user, db)
@@ -149,19 +155,41 @@ async def list_members(
     if not org:
         raise HTTPException(status_code=404, detail="Organization not found")
     
-    # Get all members with user details
-    result = await db.execute(
+    # Build query for members with user details
+    query = (
         select(Member)
         .where(Member.organization_id == organization_id)
         .options(selectinload(Member.user))
-        .order_by(Member.joined_at)
     )
+    
+    # Apply role filter if provided
+    if role:
+        try:
+            role_enum = MemberRole(role.lower())
+            query = query.where(Member.role == role_enum)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {role}. Must be 'admin' or 'viewer'"
+            )
+    
+    # Execute query
+    result = await db.execute(query.order_by(Member.joined_at))
     members = list(result.scalars().all())
+    
+    # Apply search filter (in-memory, after loading user data)
+    if search:
+        search_lower = search.lower()
+        members = [
+            m for m in members
+            if (m.user.full_name and search_lower in m.user.full_name.lower())
+            or (m.user.email and search_lower in m.user.email.lower())
+        ]
     
     # Check if owner is in members list
     owner_in_members = any(m.user_id == org.owner_id for m in members)
     
-    # If owner not in members, add as virtual member
+    # If owner not in members, add as virtual member (if matches filters)
     if not owner_in_members:
         # Get owner user
         result = await db.execute(
@@ -170,17 +198,33 @@ async def list_members(
         owner_user = result.scalar_one_or_none()
         
         if owner_user:
-            # Create virtual member object for owner
-            virtual_member = Member(
-                id=0,  # Virtual ID
-                user_id=org.owner_id,
-                organization_id=organization_id,
-                role=MemberRole.ADMIN,  # Treat owner as admin
-                joined_at=org.created_at,
-            )
-            virtual_member.user = owner_user
-            # Insert at beginning of list
-            members.insert(0, virtual_member)
+            # Check if owner matches search filter
+            matches_search = True
+            if search:
+                search_lower = search.lower()
+                matches_search = (
+                    (owner_user.full_name and search_lower in owner_user.full_name.lower())
+                    or (owner_user.email and search_lower in owner_user.email.lower())
+                )
+            
+            # Check if owner matches role filter (owner is treated as admin)
+            matches_role = True
+            if role and role.lower() != "admin":
+                matches_role = False
+            
+            # Add owner if matches all filters
+            if matches_search and matches_role:
+                # Create virtual member object for owner
+                virtual_member = Member(
+                    id=0,  # Virtual ID
+                    user_id=org.owner_id,
+                    organization_id=organization_id,
+                    role=MemberRole.ADMIN,  # Treat owner as admin
+                    joined_at=org.created_at,
+                )
+                virtual_member.user = owner_user
+                # Insert at beginning of list
+                members.insert(0, virtual_member)
     
     return MemberListResponse(members=members, total=len(members))
 

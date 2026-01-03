@@ -3,6 +3,7 @@ Organizations management endpoints
 API routes for organization operations
 """
 
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,7 +69,7 @@ async def get_current_organization(
 
 @router.get("/{org_id}", response_model=OrganizationResponse)
 async def get_organization(
-    org_id: int,
+    org_id: UUID,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -103,7 +104,7 @@ async def get_organization(
 
 @router.patch("/{org_id}", response_model=OrganizationResponse)
 async def update_organization(
-    org_id: int,
+    org_id: UUID,
     org_update: OrganizationUpdate,
     current_user: User = Depends(require_organization_owner),
     db: AsyncSession = Depends(get_db),
@@ -121,7 +122,7 @@ async def update_organization(
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_organization(
-    org_id: int,
+    org_id: UUID,
     current_user: User = Depends(require_organization_owner),
     db: AsyncSession = Depends(get_db),
 ):
@@ -139,7 +140,7 @@ async def delete_organization(
 
 @router.patch("/{org_id}/complete", response_model=OrganizationResponse)
 async def complete_organization(
-    org_id: int,
+    org_id: UUID,
     org_data: OrganizationComplete,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -173,7 +174,7 @@ async def complete_organization(
 
 @router.post("/{org_id}/transfer-ownership", response_model=OrganizationResponse)
 async def transfer_ownership(
-    org_id: int,
+    org_id: UUID,
     new_owner_id: int,
     current_user: User = Depends(require_organization_owner),
     db: AsyncSession = Depends(get_db),

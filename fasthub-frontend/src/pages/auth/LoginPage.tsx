@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Card, Typography, Alert, Divider } from 'antd';
+import { Form, Input, Button, Card, Typography, Alert, Divider, Checkbox } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { useAuthStore } from '../../store/authStore';
 
@@ -11,12 +11,12 @@ export default function LoginPage() {
   const { login, error, clearError } = useAuthStore();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async (values: { email: string; password: string }) => {
+  const onFinish = async (values: { email: string; password: string; remember_me?: boolean }) => {
     setLoading(true);
     clearError();
     
     try {
-      await login(values.email, values.password);
+      await login(values.email, values.password, values.remember_me);
       navigate('/dashboard');
     } catch (err) {
       console.error('Login failed:', err);
@@ -79,7 +79,10 @@ export default function LoginPage() {
           </Form.Item>
 
           <Form.Item>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Form.Item name="remember_me" valuePropName="checked" noStyle>
+                <Checkbox>Remember me for 30 days</Checkbox>
+              </Form.Item>
               <Link to="/forgot-password">
                 <Text type="secondary">Forgot password?</Text>
               </Link>

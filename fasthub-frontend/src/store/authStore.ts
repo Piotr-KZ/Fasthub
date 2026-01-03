@@ -9,7 +9,7 @@ interface AuthState {
   error: string | null;
   
   // Actions
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   fetchCurrentUser: () => Promise<void>;
@@ -22,14 +22,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, rememberMe?: boolean) => {
     set({ isLoading: true, error: null });
     try {
       const { data } = await authApi.login({ email, password });
       
-      // Save tokens
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
+      // Save tokens (use localStorage for remember_me, sessionStorage otherwise)
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('access_token', data.access_token);
+      storage.setItem('refresh_token', data.refresh_token);
+      
+      // Also save remember_me preference
+      if (rememberMe) {
+        localStorage.setItem('remember_me', 'true');
+      } else {
+        localStorage.removeItem('remember_me');
+      }
       
       // Fetch user data
       const { data: user } = await authApi.getCurrentUser();

@@ -88,9 +88,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      // Clear tokens and state
+      // Clear tokens and state from both storages
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
       set({ 
         user: null, 
         isAuthenticated: false 
@@ -100,7 +102,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   fetchCurrentUser: async () => {
     console.error('[DEBUG] fetchCurrentUser called');
-    const token = localStorage.getItem('access_token');
+    // Check both localStorage and sessionStorage for token
+    const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
     console.error('[DEBUG] token exists:', !!token);
     if (!token) {
       set({ isAuthenticated: false, isLoading: false });
@@ -136,9 +139,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch (error) {
       console.error('[DEBUG] fetchCurrentUser error:', error);
-      // Token invalid, clear auth
+      // Token invalid, clear auth from both storages
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
       set({ 
         user: null, 
         isAuthenticated: false, 

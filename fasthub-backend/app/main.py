@@ -168,6 +168,24 @@ async def startup_event():
     logger.info(f"📍 API Documentation: http://localhost:8000{settings.API_V1_STR}/docs")
     logger.info(f"🔧 CORS Origins: {origins}")
     logger.info(f"🐛 Debug Mode: {settings.DEBUG}")
+    
+    # Run database migrations automatically
+    try:
+        logger.info("🔄 Running database migrations...")
+        from alembic.config import Config
+        from alembic import command
+        import os
+        
+        # Get the alembic.ini path
+        alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini"))
+        
+        # Run migrations
+        command.upgrade(alembic_cfg, "head")
+        logger.info("✅ Database migrations completed successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to run database migrations: {e}")
+        # Don't crash the app if migrations fail - let it start anyway
+        logger.warning("⚠️ Application starting without running migrations")
 
 
 # Shutdown event

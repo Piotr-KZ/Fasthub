@@ -71,3 +71,4 @@ dmypy.json
 .pyre/
 .env.production
 .env.staging
+.env.local

@@ -23,7 +23,7 @@ COPY . .
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Port na którym działa backend (Railway automatycznie ustawi $PORT)
+# Port na którym działa backend
 EXPOSE 8000
 
 # Use entrypoint to generate .env and start app

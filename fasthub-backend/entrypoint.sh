@@ -3,7 +3,7 @@ set -e
 
 # Load .env.production if it exists and DATABASE_URL is empty
 if [ -z "$DATABASE_URL" ] && [ -f "/app/.env.production" ]; then
-    echo "=== LOADING .env.production (Railway env vars not available) ==="
+    echo "=== LOADING .env.production (environment vars not available) ==="
     export $(cat /app/.env.production | grep -v '^#' | xargs)
 fi
 

@@ -92,8 +92,8 @@
 ## AUDIT FIXES (2026-01-02) - 14 Tasks
 
 ### WAVE 1 - CRITICAL (35 min)
-- [ ] #1: Rotate Production Secrets (30 min) - CRITICAL 🚨
-- [ ] #2: Fix Dev Token Exposure (5 min) - CRITICAL 🚨
+- [x] #1: Rotate Production Secrets (30 min) - CRITICAL 🚨
+- [x] #2: Fix Dev Token Exposure (5 min) - CRITICAL 🚨
 
 ### WAVE 2 - QUICK WINS (1h 10min)
 - [ ] #3: Pydantic Strict Mode (2 min)

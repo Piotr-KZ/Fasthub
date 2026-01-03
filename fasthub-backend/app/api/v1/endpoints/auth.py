@@ -268,10 +268,15 @@ async def send_magic_link(
 
     # In development, return token for testing
     # In production, only return success message
-    return {
-        "message": "If this email exists, a magic link has been sent",
-        "dev_token": token,  # Remove in production!
+    response_data = {
+        "message": "If this email exists, a magic link has been sent"
     }
+    
+    # Only include dev_token in non-production environments
+    if settings.ENVIRONMENT != "production":
+        response_data["dev_token"] = token
+    
+    return response_data
 
 
 @router.post("/magic-link/verify", response_model=TokenResponse)

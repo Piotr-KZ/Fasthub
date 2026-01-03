@@ -5,6 +5,7 @@ Database operations for organizations
 
 import re
 from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +29,7 @@ class OrganizationRepository:
         result = await self.db.execute(select(Organization).where(Organization.slug == slug))
         return result.scalar_one_or_none()
 
-    async def create(self, name: str, owner_id: int, slug: Optional[str] = None) -> Organization:
+    async def create(self, name: str, owner_id: UUID, slug: Optional[str] = None) -> Organization:
         """Create new organization"""
         # Generate slug if not provided
         if not slug:

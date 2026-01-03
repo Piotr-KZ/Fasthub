@@ -4,6 +4,7 @@ Business logic for organization operations
 """
 
 from typing import Optional
+from uuid import UUID
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,7 +24,7 @@ class OrganizationService:
         self.org_repo = OrganizationRepository(db)
         self.user_service = UserService(db)
 
-    async def create_organization(self, name: str, owner_id: int) -> Organization:
+    async def create_organization(self, name: str, owner_id: UUID) -> Organization:
         """Create new organization"""
         return await self.org_repo.create(name=name, owner_id=owner_id)
 
@@ -118,7 +119,7 @@ class OrganizationService:
         await self.org_repo.delete(org)
 
     async def transfer_ownership(
-        self, org_id: int, new_owner_id: int, current_user: User
+        self, org_id: int, new_owner_id: UUID, current_user: User
     ) -> Organization:
         """Transfer organization ownership"""
         org = await self.org_repo.get_by_id(org_id)

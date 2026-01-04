@@ -50,18 +50,12 @@ def upgrade():
         unique=False
     )
     
-    # Add index to audit_logs.user_id
-    op.create_index(
-        'ix_audit_logs_user_id',
-        'audit_logs',
-        ['user_id'],
-        unique=False
-    )
+    # Note: ix_audit_logs_user_id already created in create_audit_logs_table migration
 
 
 def downgrade():
     """Remove performance indexes"""
-    op.drop_index('ix_audit_logs_user_id', table_name='audit_logs')
+    # Note: ix_audit_logs_user_id is dropped in create_audit_logs_table downgrade
     op.drop_index('ix_organizations_owner_id', table_name='organizations')
     op.drop_index('ix_members_role', table_name='members')
     op.drop_index('ix_users_magic_link_token', table_name='users')

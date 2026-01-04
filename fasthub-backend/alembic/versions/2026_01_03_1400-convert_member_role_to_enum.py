@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import ENUM
 
 # revision identifiers, used by Alembic.
 revision = 'convert_member_role_to_enum'
-down_revision = 'add_performance_indexes'
+down_revision = 'add_email_org_2026'
 branch_labels = None
 depends_on = None
 

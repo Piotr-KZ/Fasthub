@@ -138,6 +138,7 @@ async def test_admin(db_session: AsyncSession, test_organization: Organization) 
         full_name="Admin User",
         is_active=True,
         is_verified=True,
+        is_superuser=True,  # Required for admin endpoints
     )
     db_session.add(admin)
     await db_session.flush()  # Get admin.id before creating membership

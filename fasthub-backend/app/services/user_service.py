@@ -91,12 +91,6 @@ class UserService:
             user.email = user_update.email
             user.is_verified = False  # Require re-verification
 
-        if user_update.role is not None:
-            # Only admins can change roles
-            # Role changes now handled through members table
-            # This field is deprecated
-            pass
-
         if user_update.is_active is not None:
             # Only admins can activate/deactivate users
             if not current_user.is_superuser:

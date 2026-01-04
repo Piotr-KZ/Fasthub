@@ -3,13 +3,8 @@ name: Frontend Tests
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'fasthub-frontend/**'
-      - '.github/workflows/frontend-tests.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'fasthub-frontend/**'
   workflow_dispatch:
 
 jobs:

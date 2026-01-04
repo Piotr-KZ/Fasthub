@@ -10,6 +10,7 @@ on:
     branches: [ main ]
     paths:
       - 'fasthub-backend/**'
+  workflow_dispatch:
 
 jobs:
   test:

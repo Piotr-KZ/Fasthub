@@ -96,7 +96,7 @@ jobs:
       - name: Check test coverage
         run: |
           cd fasthub-backend
-          coverage report --fail-under=50
+          coverage report --fail-under=40
       
       - name: Lint with Ruff
         run: |

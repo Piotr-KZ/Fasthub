@@ -51,12 +51,15 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
     # Drop tables after test (manually to avoid circular dependency)
     async with test_engine.begin() as conn:
-        # Drop tables in correct order
+        # Drop tables in correct order (respect foreign keys)
         await conn.execute(text("DROP TABLE IF EXISTS invoices CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS subscriptions CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS api_tokens CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS audit_logs CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS members CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS users CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS organizations CASCADE"))
+        await conn.execute(text("DROP TYPE IF EXISTS memberrole CASCADE"))
         await conn.execute(text("DROP TYPE IF EXISTS userrole CASCADE"))
         await conn.execute(text("DROP TYPE IF EXISTS subscriptionstatus CASCADE"))
         await conn.execute(text("DROP TYPE IF EXISTS invoicestatus CASCADE"))
@@ -99,17 +102,26 @@ async def test_organization(db_session: AsyncSession) -> Organization:
 
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession, test_organization: Organization) -> User:
-    """Create test user"""
+    """Create test user with membership"""
+    from app.models.member import Member, MemberRole
+    
     user = User(
         email="test@example.com",
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User",
         is_active=True,
         is_verified=True,
-        role="user",
-        organization_id=test_organization.id,
     )
     db_session.add(user)
+    await db_session.flush()  # Get user.id before creating membership
+    
+    # Create membership
+    member = Member(
+        user_id=user.id,
+        organization_id=test_organization.id,
+        role=MemberRole.VIEWER
+    )
+    db_session.add(member)
     await db_session.commit()
     await db_session.refresh(user)
     return user
@@ -117,17 +129,26 @@ async def test_user(db_session: AsyncSession, test_organization: Organization) -
 
 @pytest_asyncio.fixture
 async def test_admin(db_session: AsyncSession, test_organization: Organization) -> User:
-    """Create test admin user"""
+    """Create test admin user with admin membership"""
+    from app.models.member import Member, MemberRole
+    
     admin = User(
         email="admin@example.com",
         hashed_password=get_password_hash("adminpassword123"),
         full_name="Admin User",
         is_active=True,
         is_verified=True,
-        role="admin",
-        organization_id=test_organization.id,
     )
     db_session.add(admin)
+    await db_session.flush()  # Get admin.id before creating membership
+    
+    # Create admin membership
+    member = Member(
+        user_id=admin.id,
+        organization_id=test_organization.id,
+        role=MemberRole.ADMIN
+    )
+    db_session.add(member)
     await db_session.commit()
     await db_session.refresh(admin)
     return admin

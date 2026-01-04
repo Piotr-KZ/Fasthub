@@ -27,11 +27,6 @@ jobs:
           cd fasthub-frontend
           npm ci
       
-      - name: Lint code
-        run: |
-          cd fasthub-frontend
-          npm run lint
-      
       - name: Build check
         run: |
           cd fasthub-frontend

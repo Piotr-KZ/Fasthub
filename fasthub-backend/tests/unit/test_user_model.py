@@ -42,6 +42,6 @@ def test_user_default_values():
         email="test@test.com",
         hashed_password=get_password_hash("test")
     )
-    assert user.is_active is True
-    # is_verified defaults to None (not False)
+    # Both is_active and is_verified default to None
+    assert user.is_active is None
     assert user.is_verified is None

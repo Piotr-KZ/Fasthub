@@ -144,7 +144,21 @@ async def add_process_time_header(request: Request, call_next):
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
-# Health check endpoint
+# Health check endpoints
+# Root-level health endpoint for Render.com and other monitoring services
+@app.get("/health")
+async def root_health_check():
+    """
+    Root-level health check endpoint (for Render.com)
+    """
+    return {
+        "status": "healthy",
+        "service": "FastHub",
+        "version": settings.APP_VERSION,
+        "timestamp": time.time(),
+    }
+
+# API v1 health endpoint (legacy)
 @app.get("/api/v1/health")
 async def health_check():
     """

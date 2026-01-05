@@ -153,6 +153,7 @@ async def test_user(db_session: AsyncSession, test_organization: Organization) -
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User",
         is_active=True,
+        is_verified=True,
     )
     db_session.add(user)
     await db_session.commit()

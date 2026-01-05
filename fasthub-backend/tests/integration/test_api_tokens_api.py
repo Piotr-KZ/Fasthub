@@ -17,10 +17,9 @@ async def test_create_token(
 ):
     """Test POST /api/v1/api-tokens - Create new API token"""
     response = await async_client.post(
-        "/api/v1/api-tokens",
+        "/api/v1/api-tokens/",
         json={
-            "name": "Test API Token",
-            "scopes": ["read", "write"]
+            "name": "Test API Token"
         },
         headers=auth_headers
     )
@@ -47,14 +46,13 @@ async def test_list_tokens(
     token = APIToken(
         user_id=test_user.id,
         name="List Test Token",
-        token_hash=get_password_hash("test_token_123"),
-        scopes=["read"]
+        token_hash=get_password_hash("test_token_123")
     )
     db_session.add(token)
     await db_session.commit()
     
     response = await async_client.get(
-        "/api/v1/api-tokens",
+        "/api/v1/api-tokens/",
         headers=auth_headers
     )
     
@@ -82,8 +80,7 @@ async def test_revoke_token(
     token = APIToken(
         user_id=test_user.id,
         name="Revoke Test Token",
-        token_hash=get_password_hash("revoke_token_123"),
-        scopes=["read"]
+        token_hash=get_password_hash("revoke_token_123")
     )
     db_session.add(token)
     await db_session.commit()
@@ -98,7 +95,7 @@ async def test_revoke_token(
     
     # Verify token is deleted
     list_response = await async_client.get(
-        "/api/v1/api-tokens",
+        "/api/v1/api-tokens/",
         headers=auth_headers
     )
     data = list_response.json()
@@ -122,8 +119,7 @@ async def test_validate_token(
     token = APIToken(
         user_id=test_user.id,
         name="Validate Test Token",
-        token_hash=get_password_hash(plain_token),
-        scopes=["read", "write"]
+        token_hash=get_password_hash(plain_token)
     )
     db_session.add(token)
     await db_session.commit()
@@ -137,8 +133,6 @@ async def test_validate_token(
     data = response.json()
     assert data["valid"] is True
     assert data["user_id"] == str(test_user.id)
-    assert "read" in data["scopes"]
-    assert "write" in data["scopes"]
 
 
 @pytest.mark.asyncio

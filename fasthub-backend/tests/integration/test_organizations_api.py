@@ -18,7 +18,7 @@ async def test_create_organization(
 ):
     """Test POST /api/v1/organizations - Create new organization"""
     response = await async_client.post(
-        "/api/v1/organizations",
+        "/api/v1/organizations/",
         json={
             "name": "New Test Organization",
             "slug": "new-test-org"
@@ -42,7 +42,7 @@ async def test_list_user_organizations(
 ):
     """Test GET /api/v1/organizations - List user's organizations"""
     response = await async_client.get(
-        "/api/v1/organizations",
+        "/api/v1/organizations/",
         headers=auth_headers
     )
     

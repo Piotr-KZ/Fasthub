@@ -3,6 +3,7 @@ Unit tests for Organization Service
 Tests business logic for organization operations
 """
 
+import uuid
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,7 +80,8 @@ async def test_get_organization_by_id_not_found(
 ):
     """Test fetching non-existent organization"""
     # Act
-    org = await org_service.get_organization_by_id(999999)
+    fake_uuid = uuid.UUID('00000000-0000-0000-0000-000000000001')
+    org = await org_service.get_organization_by_id(fake_uuid)
     
     # Assert
     assert org is None
@@ -109,8 +111,9 @@ async def test_get_organization_with_stats_not_found(
 ):
     """Test fetching stats for non-existent organization"""
     # Act & Assert
+    fake_uuid = uuid.UUID('00000000-0000-0000-0000-000000000001')
     with pytest.raises(HTTPException) as exc_info:
-        await org_service.get_organization_with_stats(999999)
+        await org_service.get_organization_with_stats(fake_uuid)
     
     assert exc_info.value.status_code == 404
     assert "not found" in exc_info.value.detail.lower()
@@ -185,11 +188,12 @@ async def test_update_organization_not_found(
     """Test updating non-existent organization"""
     # Arrange
     update_data = OrganizationUpdate(name="New Name")
+    fake_uuid = uuid.UUID('00000000-0000-0000-0000-000000000001')
     
     # Act & Assert
     with pytest.raises(HTTPException) as exc_info:
         await org_service.update_organization(
-            org_id=999999,
+            org_id=fake_uuid,
             org_update=update_data,
             current_user=owner_user
         )

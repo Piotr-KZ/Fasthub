@@ -3,6 +3,7 @@ Unit tests for User Service
 Tests business logic for user operations
 """
 
+import uuid
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -70,7 +71,8 @@ async def test_get_user_by_id_not_found(
 ):
     """Test fetching non-existent user"""
     # Act
-    user = await user_service.get_user_by_id(999999)
+    fake_uuid = uuid.UUID('00000000-0000-0000-0000-000000000001')
+    user = await user_service.get_user_by_id(fake_uuid)
     
     # Assert
     assert user is None
@@ -195,11 +197,12 @@ async def test_update_user_not_found(
     """Test updating non-existent user"""
     # Arrange
     update_data = UserUpdate(full_name="New Name")
+    fake_uuid = uuid.UUID('00000000-0000-0000-0000-000000000001')
     
     # Act & Assert
     with pytest.raises(HTTPException) as exc_info:
         await user_service.update_user(
-            user_id=999999,
+            user_id=fake_uuid,
             user_update=update_data,
             current_user=test_user
         )

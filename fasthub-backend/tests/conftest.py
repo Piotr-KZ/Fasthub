@@ -175,6 +175,24 @@ async def test_user(db_session: AsyncSession, test_organization: Organization) -
 
 
 @pytest_asyncio.fixture
+async def auth_headers(test_user: User) -> dict:
+    """Create authentication headers for test_user"""
+    from app.core.security import create_access_token
+    
+    access_token = create_access_token(data={"sub": str(test_user.id)})
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest_asyncio.fixture
+async def admin_headers(test_admin: User) -> dict:
+    """Create authentication headers for test_admin"""
+    from app.core.security import create_access_token
+    
+    access_token = create_access_token(data={"sub": str(test_admin.id)})
+    return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest_asyncio.fixture
 async def test_api_token(db_session: AsyncSession, test_user: User) -> APIToken:
     """Create test API token"""
     token = APIToken(

@@ -92,6 +92,7 @@ async def test_get_organization_with_stats(
     org_service: OrganizationService,
     test_organization: Organization,
     owner_user: User,
+    test_user: User,  # Ensure at least one member exists
     db_session: AsyncSession
 ):
     """Test fetching organization with statistics"""

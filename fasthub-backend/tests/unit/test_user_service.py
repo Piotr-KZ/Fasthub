@@ -101,7 +101,8 @@ async def test_get_users_by_organization(
 @pytest.mark.asyncio
 async def test_get_users_by_organization_with_pagination(
     user_service: UserService,
-    test_organization: Organization
+    test_organization: Organization,
+    test_user: User  # Ensure at least one user exists
 ):
     """Test listing users with pagination"""
     # Act

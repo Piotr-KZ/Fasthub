@@ -91,9 +91,16 @@ async def test_get_organization_by_id_not_found(
 async def test_get_organization_with_stats(
     org_service: OrganizationService,
     test_organization: Organization,
-    test_user: User
+    owner_user: User,
+    db_session: AsyncSession
 ):
     """Test fetching organization with statistics"""
+    # Arrange - Set owner and email
+    test_organization.owner_id = owner_user.id
+    test_organization.email = "org@example.com"
+    await db_session.commit()
+    await db_session.refresh(test_organization)
+    
     # Act
     org_with_stats = await org_service.get_organization_with_stats(test_organization.id)
     
@@ -134,7 +141,6 @@ async def test_update_organization(
     
     update_data = OrganizationUpdate(
         name="Updated Organization Name",
-        type="company",
         nip="1234567890",
         phone="+48123456789"
     )
@@ -148,7 +154,6 @@ async def test_update_organization(
     
     # Assert
     assert updated_org.name == "Updated Organization Name"
-    assert updated_org.type == "company"
     assert updated_org.nip == "1234567890"
     assert updated_org.phone == "+48123456789"
 

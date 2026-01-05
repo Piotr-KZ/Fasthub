@@ -121,7 +121,7 @@ async def test_user(db_session: AsyncSession, test_organization: Organization) -
     from app.models.member import Member
 
     member = Member(
-        user_id=user.id, organization_id=test_organization.id, role="admin", is_active=True
+        user_id=user.id, organization_id=test_organization.id, role="admin"
     )
     db_session.add(member)
     await db_session.commit()

@@ -13,8 +13,12 @@ async def test_list_users(async_client, test_user, test_admin, admin_headers):
 
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
-    assert isinstance(data, list)
-    assert len(data) >= 2  # At least test_user and test_admin
+    assert isinstance(data, dict)  # Paginated response
+    assert "items" in data
+    assert isinstance(data["items"], list)
+    assert len(data["items"]) >= 2  # At least test_user and test_admin
+    assert "total" in data
+    assert data["total"] >= 2
 
 
 @pytest.mark.asyncio

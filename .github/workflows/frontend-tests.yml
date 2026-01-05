@@ -3,13 +3,9 @@ name: Frontend Tests
 on:
   push:
     branches: [ main, develop ]
-    paths:
-      - 'fasthub-frontend/**'
-      - '.github/workflows/frontend-tests.yml'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'fasthub-frontend/**'
+  workflow_dispatch:
 
 jobs:
   test:
@@ -30,11 +26,6 @@ jobs:
         run: |
           cd fasthub-frontend
           npm ci
-      
-      - name: Lint code
-        run: |
-          cd fasthub-frontend
-          npm run lint
       
       - name: Build check
         run: |

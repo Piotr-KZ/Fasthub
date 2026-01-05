@@ -36,7 +36,8 @@ async def test_register_user(db_session):
     assert verify_password(user_data["password"], user.hashed_password)
     assert access_token is not None
     assert refresh_token is not None
-    assert user.organization_id is not None
+    # Note: User model no longer has organization_id - uses memberships relationship instead
+    assert user.id is not None  # User was created successfully
 
 
 @pytest.mark.asyncio

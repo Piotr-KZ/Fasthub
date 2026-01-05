@@ -2,6 +2,7 @@
 Pytest configuration and shared fixtures
 """
 
+import os
 import asyncio
 from typing import AsyncGenerator
 
@@ -12,14 +13,17 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# Test database URL - matches GitHub Actions workflow
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:testpass@localhost:5432/testdb"
+
+# Set DATABASE_URL before importing app (to avoid default credentials)
+os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
+
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.db.session import Base, get_db
 from app.main import app
 from app.models import APIToken, Invoice, Organization, Subscription, User
-
-# Test database URL - matches GitHub Actions workflow
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:testpass@localhost:5432/testdb"
 
 
 # Create test engine
@@ -102,75 +106,43 @@ async def test_organization(db_session: AsyncSession) -> Organization:
 
 @pytest_asyncio.fixture
 async def test_user(db_session: AsyncSession, test_organization: Organization) -> User:
-    """Create test user with membership"""
-    from app.models.member import Member, MemberRole
-    
+    """Create test user"""
     user = User(
         email="test@example.com",
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User",
         is_active=True,
-        is_verified=True,
     )
     db_session.add(user)
-    await db_session.flush()  # Get user.id before creating membership
-    
+    await db_session.commit()
+    await db_session.refresh(user)
+
     # Create membership
+    from app.models.member import Member
+
     member = Member(
-        user_id=user.id,
-        organization_id=test_organization.id,
-        role=MemberRole.VIEWER
+        user_id=user.id, organization_id=test_organization.id, role="admin", is_active=True
     )
     db_session.add(member)
     await db_session.commit()
-    await db_session.refresh(user)
+
     return user
 
 
 @pytest_asyncio.fixture
-async def test_admin(db_session: AsyncSession, test_organization: Organization) -> User:
-    """Create test admin user with admin membership"""
-    from app.models.member import Member, MemberRole
-    
-    admin = User(
-        email="admin@example.com",
-        hashed_password=get_password_hash("adminpassword123"),
-        full_name="Admin User",
+async def test_api_token(db_session: AsyncSession, test_user: User) -> APIToken:
+    """Create test API token"""
+    token = APIToken(
+        user_id=test_user.id,
+        name="Test Token",
+        token_hash=get_password_hash("test-token-secret"),
+        scopes=["read", "write"],
         is_active=True,
-        is_verified=True,
-        is_superuser=True,  # Required for admin endpoints
     )
-    db_session.add(admin)
-    await db_session.flush()  # Get admin.id before creating membership
-    
-    # Create admin membership
-    member = Member(
-        user_id=admin.id,
-        organization_id=test_organization.id,
-        role=MemberRole.ADMIN
-    )
-    db_session.add(member)
+    db_session.add(token)
     await db_session.commit()
-    await db_session.refresh(admin)
-    return admin
-
-
-@pytest.fixture
-def auth_headers(test_user: User) -> dict:
-    """Create authentication headers for test user"""
-    from app.core.security import create_access_token
-
-    access_token = create_access_token(data={"sub": str(test_user.id)})
-    return {"Authorization": f"Bearer {access_token}"}
-
-
-@pytest.fixture
-def admin_headers(test_admin: User) -> dict:
-    """Create authentication headers for admin user"""
-    from app.core.security import create_access_token
-
-    access_token = create_access_token(data={"sub": str(test_admin.id)})
-    return {"Authorization": f"Bearer {access_token}"}
+    await db_session.refresh(token)
+    return token
 
 
 @pytest_asyncio.fixture
@@ -178,16 +150,13 @@ async def test_subscription(
     db_session: AsyncSession, test_organization: Organization
 ) -> Subscription:
     """Create test subscription"""
-    from datetime import datetime, timedelta
-
     subscription = Subscription(
         organization_id=test_organization.id,
         stripe_subscription_id="sub_test123",
         stripe_price_id="price_test123",
         status="active",
-        current_period_start=datetime.utcnow(),
-        current_period_end=datetime.utcnow() + timedelta(days=30),
-        cancel_at_period_end=False,
+        current_period_start=1234567890,
+        current_period_end=1234567890 + 2592000,  # +30 days
     )
     db_session.add(subscription)
     await db_session.commit()
@@ -200,12 +169,12 @@ async def test_invoice(db_session: AsyncSession, test_organization: Organization
     """Create test invoice"""
     invoice = Invoice(
         organization_id=test_organization.id,
-        invoice_number="INV-TEST-001",
         stripe_invoice_id="in_test123",
-        status="PAID",
-        amount=99.99,
-        currency="USD",
-        description="Test subscription payment",
+        amount_due=1000,
+        amount_paid=1000,
+        currency="usd",
+        status="paid",
+        invoice_pdf="https://example.com/invoice.pdf",
     )
     db_session.add(invoice)
     await db_session.commit()

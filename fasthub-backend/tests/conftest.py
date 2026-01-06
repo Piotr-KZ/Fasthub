@@ -19,6 +19,10 @@ TEST_DATABASE_URL = os.environ.get(
     "postgresql+asyncpg://postgres:testpass@localhost:5432/testdb"
 )
 
+# Convert postgresql:// to postgresql+asyncpg:// for async engine
+if TEST_DATABASE_URL.startswith("postgresql://"):
+    TEST_DATABASE_URL = TEST_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # Ensure DATABASE_URL is set before importing app
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
@@ -81,9 +85,20 @@ def client(override_get_db) -> TestClient:
 
 @pytest_asyncio.fixture
 async def async_client(override_get_db) -> AsyncGenerator[AsyncClient, None]:
-    """Create async test client"""
+    """Create async test client with rate limiter disabled"""
+    # Mock limiter.limit() decorator to bypass rate limiting
+    from app.core.rate_limit import limiter
+    from unittest.mock import MagicMock
+    
+    original_limit = limiter.limit
+    # Replace limiter.limit with a no-op decorator
+    limiter.limit = lambda *args, **kwargs: lambda func: func
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
+    
+    # Restore original limiter
+    limiter.limit = original_limit
 
 
 @pytest_asyncio.fixture
@@ -149,6 +164,7 @@ async def test_user(db_session: AsyncSession, test_organization: Organization) -
         hashed_password=get_password_hash("testpassword123"),
         full_name="Test User",
         is_active=True,
+        is_verified=True,
     )
     db_session.add(user)
     await db_session.commit()

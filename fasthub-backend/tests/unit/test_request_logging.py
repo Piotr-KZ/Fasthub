@@ -1,5 +1,6 @@
 # ============================================================================
 
+import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.middleware.request_logging import RequestLoggingMiddleware
 

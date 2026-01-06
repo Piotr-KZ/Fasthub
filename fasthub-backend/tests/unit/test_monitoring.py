@@ -1,5 +1,6 @@
 # ============================================================================
 
+import pytest
 from unittest.mock import MagicMock, patch
 from app.core.monitoring import (
     collect_metric,

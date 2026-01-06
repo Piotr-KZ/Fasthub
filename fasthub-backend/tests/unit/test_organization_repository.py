@@ -1,6 +1,7 @@
 # Coverage: app/services/organization_repository.py
 # ============================================================================
 
+import pytest
 from app.services.organization_repository import (
     get_organization_by_slug,
     update_organization,

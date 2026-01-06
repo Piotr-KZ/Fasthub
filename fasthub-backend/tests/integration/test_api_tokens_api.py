@@ -25,8 +25,9 @@ async def test_create_token(
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert "token" in data
-    assert "id" in data
-    assert data["name"] == "Test Token"
+    assert "plaintext_token" in data
+    assert data["token"]["name"] == "Test Token"
+    assert "id" in data["token"]
 
 
 @pytest.mark.asyncio
@@ -74,7 +75,7 @@ async def test_revoke_token(
         json={"name": "Token to Revoke"},
         headers=auth_headers
     )
-    token_id = create_response.json()["id"]
+    token_id = create_response.json()["token"]["id"]
     
     # Revoke the token
     response = await async_client.delete(

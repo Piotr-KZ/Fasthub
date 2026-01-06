@@ -241,11 +241,11 @@ async def test_invoice(db_session: AsyncSession, test_organization: Organization
     invoice = Invoice(
         organization_id=test_organization.id,
         stripe_invoice_id="in_test123",
-        amount_due=1000,
-        amount_paid=1000,
+        invoice_number="INV-TEST-001",
+        amount=1000.00,
         currency="usd",
         status="paid",
-        invoice_pdf="https://example.com/invoice.pdf",
+        pdf_url="https://example.com/invoice.pdf",
     )
     db_session.add(invoice)
     await db_session.commit()

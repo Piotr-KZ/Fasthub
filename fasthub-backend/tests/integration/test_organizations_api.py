@@ -20,8 +20,7 @@ async def test_create_organization(
     response = await async_client.post(
         "/api/v1/organizations/",
         json={
-            "name": "New Test Organization",
-            "slug": "new-test-org"
+            "name": "New Test Organization"
         },
         headers=auth_headers
     )
@@ -29,7 +28,8 @@ async def test_create_organization(
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["name"] == "New Test Organization"
-    assert data["slug"] == "new-test-org"
+    assert "slug" in data  # Slug is auto-generated
+    assert data["slug"]  # Slug should not be empty
     assert "id" in data
 
 

@@ -66,7 +66,7 @@ async def test_add_member(
     response = await async_client.post(
         f"/api/v1/organizations/{test_organization.id}/members",
         json={
-            "user_id": str(new_user.id),
+            "email": new_user.email,
             "role": "viewer"
         },
         headers=headers

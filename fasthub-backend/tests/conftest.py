@@ -85,9 +85,17 @@ def client(override_get_db) -> TestClient:
 
 @pytest_asyncio.fixture
 async def async_client(override_get_db) -> AsyncGenerator[AsyncClient, None]:
-    """Create async test client"""
+    """Create async test client with rate limiter disabled"""
+    # Disable rate limiter for tests
+    original_limiter = getattr(app.state, 'limiter', None)
+    app.state.limiter = None
+    
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
+    
+    # Restore original limiter
+    if original_limiter:
+        app.state.limiter = original_limiter
 
 
 @pytest_asyncio.fixture

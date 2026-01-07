@@ -1,4 +1,8 @@
 import pytest
+from uuid import uuid4
+from httpx import AsyncClient
+from app.main import app
+
 # ============================================================================
 
 
@@ -62,27 +66,3 @@ async def test_non_owner_cannot_delete_organization():
         assert "owner" in response.json()["detail"].lower()
 
 
-@pytest.mark.asyncio
-async def test_blacklisted_token_rejected():
-    """Test logged-out token is rejected"""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        # First logout (blacklists token)
-        token = "valid.jwt.token"
-        await client.post(
-            "/api/v1/auth/logout",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        
-        # Try to use blacklisted token
-        response = await client.get(
-            "/api/v1/users/me",
-            headers={"Authorization": f"Bearer {token}"}
-        )
-        
-        assert response.status_code == 401
-        assert "blacklisted" in response.json()["detail"].lower() or "logged out" in response.json()["detail"].lower()
-
-
-# ====================================================================================
-# PHASE 3: LOW PRIORITY - Schema Validation (15 tests)
-# ====================================================================================

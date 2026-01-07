@@ -1,4 +1,8 @@
 import pytest
+from uuid import uuid4
+from httpx import AsyncClient
+from app.main import app
+
 # Additional tests
 # ============================================================================
 

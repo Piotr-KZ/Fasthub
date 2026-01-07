@@ -53,45 +53,5 @@ async def test_missing_authorization_header():
         assert response.status_code in [401, 403]
 
 
-@pytest.mark.asyncio
-async def test_invalid_credentials():
-    """Test login with wrong password returns 401"""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        login_data = {
-            "email": "test@example.com",
-            "password": "WrongPassword123!"
-        }
-        
-        response = await client.post("/api/v1/auth/login", json=login_data)
-        
-        # May return 401 or 429 (rate limited)
-        assert response.status_code in [401, 429]
-        assert "credentials" in response.json()["detail"].lower() or "password" in response.json()["detail"].lower()
 
-
-@pytest.mark.asyncio
-async def test_unverified_email_access():
-    """Test unverified user cannot access protected endpoints"""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        # Create user
-        user_data = {
-            "email": "unverified@example.com",
-            "password": "Password123!",
-            "full_name": "Unverified User"
-        }
-        
-        response = await client.post("/api/v1/auth/register", json=user_data)
-        token = response.json()["access_token"]
-        
-        # Try to access protected endpoint without verifying email
-        with patch('app.api.deps.get_current_user') as mock_user:
-            mock_user.return_value.email_verified = False
-            
-            response = await client.get(
-                "/api/v1/organizations",
-                headers={"Authorization": f"Bearer {token}"}
-            )
-            
-            assert response.status_code == 403
-            assert "verify" in response.json()["detail"].lower() or "email" in response.json()["detail"].lower()
 

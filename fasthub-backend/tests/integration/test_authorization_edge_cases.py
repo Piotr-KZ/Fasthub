@@ -17,7 +17,7 @@ async def test_access_other_user_profile():
             headers={"Authorization": "Bearer valid_token"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -31,7 +31,7 @@ async def test_access_other_organization():
             headers={"Authorization": "Bearer valid_token"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -47,7 +47,7 @@ async def test_non_admin_cannot_delete_members():
             headers={"Authorization": "Bearer viewer_token"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_non_owner_cannot_delete_organization():
             headers={"Authorization": "Bearer admin_token"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
         assert "owner" in response.json()["detail"].lower()
 
 

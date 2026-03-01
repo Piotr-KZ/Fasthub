@@ -189,10 +189,12 @@ class AdminService:
         # OBOWIĄZKOWO loguj w audit trail
         audit_log = AuditLog(
             user_id=admin_user.id,
+            user_email=admin_user.email,
             action="impersonate",
             resource_type="user",
-            resource_id=target_user.id,
-            details={
+            resource_id=str(target_user.id),
+            impersonated_by=admin_user.id,
+            extra_data={
                 "reason": reason,
                 "target_email": target_user.email,
                 "admin_email": admin_user.email,

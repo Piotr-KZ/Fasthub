@@ -209,11 +209,11 @@ class FastHubBilling(BillingContract):
 
 
 # ============================================================================
-# Audit — w pełni zaimplementowany
+# Audit — w pełni zaimplementowany (rozbudowany: before/after, IP, retention)
 # ============================================================================
 
 class FastHubAudit(AuditContract):
-    """Implementacja kontraktu audit oparta na fasthub_core.audit"""
+    """Implementacja kontraktu audit oparta na rozbudowanym AuditService"""
 
     async def log_action(
         self,
@@ -230,21 +230,18 @@ class FastHubAudit(AuditContract):
         if db is None:
             raise ValueError("db session is required")
 
-        full_details = details or {}
-        if before is not None:
-            full_details["before"] = before
-        if after is not None:
-            full_details["after"] = after
-
-        audit_log = AuditLog(
-            user_id=UUID(user_id),
+        from fasthub_core.audit.service import AuditService
+        audit = AuditService(db)
+        await audit.log_action(
             action=action,
             resource_type=resource_type,
-            resource_id=UUID(resource_id) if resource_id else None,
-            details=full_details,
+            resource_id=resource_id,
+            user_id=user_id,
+            organization_id=organization_id,
+            changes_before=before,
+            changes_after=after,
+            extra_data=details,
         )
-        db.add(audit_log)
-        await db.flush()
 
     async def get_audit_logs(
         self,
@@ -259,18 +256,16 @@ class FastHubAudit(AuditContract):
         if db is None:
             raise ValueError("db session is required")
 
-        query = select(AuditLog)
-
-        if resource_type:
-            query = query.where(AuditLog.resource_type == resource_type)
-        if resource_id:
-            query = query.where(AuditLog.resource_id == UUID(resource_id))
-        if user_id:
-            query = query.where(AuditLog.user_id == UUID(user_id))
-
-        query = query.order_by(AuditLog.created_at.desc()).offset(offset).limit(limit)
-        result = await db.execute(query)
-        logs = result.scalars().all()
+        from fasthub_core.audit.service import AuditService
+        audit = AuditService(db)
+        result = await audit.get_logs(
+            organization_id=organization_id,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            user_id=user_id,
+            page=1,
+            per_page=limit,
+        )
 
         return [
             {
@@ -278,11 +273,15 @@ class FastHubAudit(AuditContract):
                 "user_id": str(log.user_id) if log.user_id else None,
                 "action": log.action,
                 "resource_type": log.resource_type,
-                "resource_id": str(log.resource_id) if log.resource_id else None,
-                "details": log.details,
+                "resource_id": log.resource_id,
+                "changes_before": log.changes_before,
+                "changes_after": log.changes_after,
+                "summary": log.summary,
+                "extra_data": log.extra_data,
+                "ip_address": log.ip_address,
                 "created_at": log.created_at.isoformat() if log.created_at else None,
             }
-            for log in logs
+            for log in result.get("logs", [])
         ]
 
 

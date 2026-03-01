@@ -144,13 +144,13 @@ def test_fasthub_permission_uses_rbac():
     assert "billing" in CORE_PERMISSIONS
 
 
-def test_notification_not_implemented():
-    """NotificationContract powinien rzucać NotImplementedError"""
+def test_notification_requires_db():
+    """NotificationContract wymaga db session w data['db']"""
     import pytest
     from fasthub_core.contracts_impl import FastHubNotification
 
     notif = FastHubNotification()
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="db session is required"):
         import asyncio
         asyncio.get_event_loop().run_until_complete(
             notif.send_notification("user-1", "info", "Test", "Test message")

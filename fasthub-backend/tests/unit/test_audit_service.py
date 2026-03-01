@@ -38,7 +38,7 @@ async def test_log_action_basic(
     assert audit_log.user_id == test_user.id
     assert audit_log.action == "user.update"
     assert audit_log.resource_type == "user"
-    assert audit_log.resource_id == test_user.id
+    assert audit_log.resource_id == str(test_user.id)
     assert audit_log.extra_data is None
     assert audit_log.ip_address is None
     assert audit_log.user_agent is None

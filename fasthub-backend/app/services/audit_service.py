@@ -54,7 +54,7 @@ class AuditService:
             user_id=user.id,
             action=action,
             resource_type=resource_type,
-            resource_id=resource_id,
+            resource_id=str(resource_id) if resource_id else None,
             extra_data=extra_data,
             ip_address=ip_address,
             user_agent=user_agent,

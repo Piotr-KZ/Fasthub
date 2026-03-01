@@ -79,9 +79,9 @@ def upgrade():
             sa.Column('summary', sa.Text(), nullable=True)
         )
 
-    # Rename details -> extra_data (metadata column)
-    if 'details' in audit_columns and 'extra_data' not in audit_columns:
-        op.alter_column('audit_logs', 'details', new_column_name='extra_data')
+    # Rename details -> metadata (column name in DB; Python attr is extra_data)
+    if 'details' in audit_columns and 'metadata' not in audit_columns:
+        op.alter_column('audit_logs', 'details', new_column_name='metadata')
 
     # Fix resource_id type: UUID -> String(255) to match model
     # (model uses String(255) for resource_id)
@@ -213,7 +213,7 @@ def downgrade():
                      existing_type=sa.String(255),
                      existing_nullable=True,
                      postgresql_using='resource_id::uuid')
-    op.alter_column('audit_logs', 'extra_data', new_column_name='details')
+    op.alter_column('audit_logs', 'metadata', new_column_name='details')
     op.drop_column('audit_logs', 'summary')
     op.drop_column('audit_logs', 'changes_after')
     op.drop_column('audit_logs', 'changes_before')

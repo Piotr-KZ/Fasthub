@@ -35,6 +35,12 @@ from fasthub_core.audit import audit_router, AuditService, get_request_context
 # Notifications
 from fasthub_core.notifications import notifications_router, NotificationService
 
+# Realtime
+from fasthub_core.realtime import ConnectionManager, get_connection_manager, ws_router, realtime_status_router
+
+# Middleware
+from fasthub_core.middleware import SecurityHeadersMiddleware, RequestIDMiddleware
+
 __all__ = [
     "__version__",
     "AuthContract", "UserContract", "PermissionContract",
@@ -45,4 +51,6 @@ __all__ = [
     "rbac_router", "RBACService", "require_permission",
     "audit_router", "AuditService", "get_request_context",
     "notifications_router", "NotificationService",
+    "ConnectionManager", "get_connection_manager", "ws_router", "realtime_status_router",
+    "SecurityHeadersMiddleware", "RequestIDMiddleware",
 ]

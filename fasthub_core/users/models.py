@@ -34,7 +34,8 @@ class User(BaseModel):
     # Status fields
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
-    is_superuser = Column(Boolean, default=False, nullable=False)  # Platform SuperAdmin
+    is_superuser = Column(Boolean, default=False, nullable=False)  # Legacy field
+    is_superadmin = Column(Boolean, default=False, nullable=False)  # Platform Super Admin
 
     # Magic link authentication
     magic_link_token = Column(String(255), nullable=True, index=True)

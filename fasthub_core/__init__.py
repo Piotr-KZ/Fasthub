@@ -23,10 +23,14 @@ from fasthub_core.config import Settings, get_settings
 # Database
 from fasthub_core.db.session import get_db, get_engine
 
+# Admin
+from fasthub_core.admin import admin_router
+
 __all__ = [
     "__version__",
     "AuthContract", "UserContract", "PermissionContract",
     "BillingContract", "AuditContract", "NotificationContract",
     "DatabaseContract",
     "Settings", "get_settings", "get_db", "get_engine",
+    "admin_router",
 ]

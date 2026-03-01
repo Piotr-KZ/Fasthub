@@ -10,7 +10,7 @@ Status implementacji:
 - FastHubPermission    — podstawowa wersja (admin/viewer)
 - FastHubBilling       — częściowo (get_subscription gotowe, limity w v2.0)
 - FastHubAudit         — w pełni zaimplementowany
-- FastHubNotification  — brak implementacji (planowane v2.0)
+- FastHubNotification  — w pełni zaimplementowany (in-app + email)
 - FastHubDatabase      — w pełni zaimplementowany
 """
 
@@ -286,13 +286,13 @@ class FastHubAudit(AuditContract):
 
 
 # ============================================================================
-# Notification — brak implementacji (planowane v2.0)
+# Notification — w pełni zaimplementowany (in-app + email transport)
 # ============================================================================
 
 class FastHubNotification(NotificationContract):
     """
-    Placeholder — powiadomienia planowane w FastHub v2.0.
-    Będzie: in-app notifications + email templates (SendGrid).
+    Implementacja kontraktu notification oparta na NotificationService.
+    In-app notifications + email (SMTP lub console mode).
     """
 
     async def send_notification(
@@ -303,7 +303,24 @@ class FastHubNotification(NotificationContract):
         message: str,
         data: Optional[Dict[str, Any]] = None,
     ) -> None:
-        raise NotImplementedError("Planowane w FastHub v2.0 — in-app notifications")
+        from fasthub_core.notifications.service import NotificationService
+        # Wymaga db session z kontekstu — data może zawierać "db", "email", "link" itp.
+        data = data or {}
+        db = data.get("db")
+        if db is None:
+            raise ValueError("db session is required in data['db']")
+
+        service = NotificationService(db)
+        await service.send(
+            user_id=UUID(user_id),
+            type=notification_type,
+            title=title,
+            message=message,
+            link=data.get("link"),
+            email=data.get("email"),
+            organization_id=UUID(data["organization_id"]) if data.get("organization_id") else None,
+            triggered_by=UUID(data["triggered_by"]) if data.get("triggered_by") else None,
+        )
 
     async def send_email(
         self,
@@ -311,7 +328,11 @@ class FastHubNotification(NotificationContract):
         template: str,
         variables: Dict[str, Any],
     ) -> None:
-        raise NotImplementedError("Planowane w FastHub v2.0 — email templates via SendGrid")
+        from fasthub_core.notifications.email_transport import create_email_transport
+        transport = create_email_transport()
+        body = variables.get("body", template)
+        subject = variables.get("subject", f"[FastHub] {template}")
+        await transport.send(to=to_email, subject=subject, body=body)
 
 
 # ============================================================================

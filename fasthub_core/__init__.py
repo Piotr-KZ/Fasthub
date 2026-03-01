@@ -32,6 +32,9 @@ from fasthub_core.rbac import rbac_router, RBACService, require_permission
 # Audit
 from fasthub_core.audit import audit_router, AuditService, get_request_context
 
+# Notifications
+from fasthub_core.notifications import notifications_router, NotificationService
+
 __all__ = [
     "__version__",
     "AuthContract", "UserContract", "PermissionContract",
@@ -41,4 +44,5 @@ __all__ = [
     "admin_router",
     "rbac_router", "RBACService", "require_permission",
     "audit_router", "AuditService", "get_request_context",
+    "notifications_router", "NotificationService",
 ]

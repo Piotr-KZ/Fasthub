@@ -82,6 +82,14 @@ class Settings(BaseSettings):
     OUTLOOK_IMAP_SERVER: str = "outlook.office365.com"
     OUTLOOK_IMAP_PORT: int = 993
 
+    # SMTP (opcjonalne — bez nich działa console mode)
+    SMTP_HOST: Optional[str] = None
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_PASSWORD: Optional[str] = None
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM_EMAIL: str = "noreply@fasthub.app"
+
     # Sentry (monitoring)
     SENTRY_DSN: Optional[str] = None
     SENTRY_ENVIRONMENT: str = "development"

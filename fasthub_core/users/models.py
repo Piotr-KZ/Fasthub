@@ -37,6 +37,10 @@ class User(BaseModel):
     is_superuser = Column(Boolean, default=False, nullable=False)  # Legacy field
     is_superadmin = Column(Boolean, default=False, nullable=False)  # Platform Super Admin
 
+    # Email verification
+    is_email_verified = Column(Boolean, default=False, nullable=False)
+    email_verified_at = Column(DateTime, nullable=True)
+
     # Magic link authentication
     magic_link_token = Column(String(255), nullable=True, index=True)
     magic_link_expires = Column(DateTime, nullable=True)

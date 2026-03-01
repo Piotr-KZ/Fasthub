@@ -29,16 +29,6 @@ async def get_current_user(
     """
     token = credentials.credentials
 
-    # Check if token is blacklisted (SYNC - no await!)
-    from fasthub_core.auth.token_blacklist import TokenBlacklist
-
-    if TokenBlacklist.is_blacklisted(token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     # Decode token
     payload = decode_access_token(token)
     if not payload:
@@ -47,6 +37,17 @@ async def get_current_user(
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    # Check if token is blacklisted (async, by JTI)
+    jti = payload.get("jti")
+    if jti:
+        from fasthub_core.auth.blacklist import is_token_blacklisted
+        if await is_token_blacklisted(jti):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token został unieważniony",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     # Get user ID from token
     user_id = payload.get("sub")

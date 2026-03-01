@@ -3,6 +3,7 @@ Security utilities
 Password hashing and JWT token management
 """
 
+import uuid as uuid_module
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
@@ -65,6 +66,10 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    # JTI — unique token identifier (dla blacklisty)
+    if "jti" not in to_encode:
+        to_encode["jti"] = str(uuid_module.uuid4())
 
     to_encode.update({"exp": expire, "iat": datetime.utcnow(), "type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

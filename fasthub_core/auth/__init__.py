@@ -1,6 +1,6 @@
 """
 Authentication package
-JWT tokens, password hashing, and FastAPI dependencies
+JWT tokens, password hashing, blacklist, email verification, and FastAPI dependencies
 """
 
 from fasthub_core.auth.service import (
@@ -22,6 +22,10 @@ from fasthub_core.auth.dependencies import (
     get_current_organization,
     require_organization_owner,
 )
+from fasthub_core.auth.blacklist import blacklist_token, is_token_blacklisted
+from fasthub_core.auth.password_validation import validate_password, PasswordValidator
+from fasthub_core.auth.email_verification import EmailVerificationService
+from fasthub_core.auth.routes import router as auth_router
 
 __all__ = [
     "verify_password",
@@ -39,4 +43,10 @@ __all__ = [
     "get_current_superuser",
     "get_current_organization",
     "require_organization_owner",
+    "blacklist_token",
+    "is_token_blacklisted",
+    "validate_password",
+    "PasswordValidator",
+    "EmailVerificationService",
+    "auth_router",
 ]

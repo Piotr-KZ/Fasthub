@@ -1,6 +1,6 @@
 # FastHub Core (local package — shared models, auth, contracts)
-# Install: pip install -e ../
-fasthub-core
+# Installed via buildCommand in render.yaml: pip install -e .
+# For local dev: pip install -e .. (from fasthub-backend/)
 
 # FastAPI Core
 fastapi==0.109.0

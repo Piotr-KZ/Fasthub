@@ -7,13 +7,11 @@ Wspiera: impersonation tracking, IP/User-Agent, retention policy.
 
 from sqlalchemy import Column, String, Text, DateTime, JSON, Index, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from datetime import datetime
-import uuid
 
-from fasthub_core.db.session import Base
+from fasthub_core.db.base import BaseModel
 
 
-class AuditLog(Base):
+class AuditLog(BaseModel):
     """
     Jeden wpis w logu audytu.
 
@@ -33,8 +31,6 @@ class AuditLog(Base):
     }
     """
     __tablename__ = "audit_logs"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # KTO
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
@@ -60,9 +56,6 @@ class AuditLog(Base):
 
     # DODATKOWE
     extra_data = Column("metadata", JSON, nullable=True)
-
-    # KIEDY
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     # Indeksy dla szybkiego wyszukiwania
     __table_args__ = (

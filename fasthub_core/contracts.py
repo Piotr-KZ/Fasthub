@@ -13,7 +13,7 @@ ZASADY:
 from abc import ABC, abstractmethod
 from typing import Callable, List, Optional, Set, Dict, Any
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class AuthContract(ABC):
@@ -287,4 +287,31 @@ class DatabaseContract(ABC):
     @abstractmethod
     def get_engine(self):
         """Zwraca SQLAlchemy async engine"""
+        ...
+
+
+class TaskQueueContract(ABC):
+    """
+    Kontrakt task queue — background jobs.
+    Pluggable backend: ARQ (Redis), Celery, Sync (dev).
+    """
+
+    @abstractmethod
+    async def enqueue(self, task_name: str, **kwargs) -> Optional[str]:
+        """Wrzuć task do kolejki. Zwraca job_id."""
+        ...
+
+    @abstractmethod
+    async def enqueue_at(self, task_name: str, defer_by: timedelta, **kwargs) -> Optional[str]:
+        """Wrzuć task z opóźnieniem. Zwraca job_id."""
+        ...
+
+    @abstractmethod
+    async def get_queue_stats(self) -> Dict[str, int]:
+        """Statystyki kolejki: queued, active, complete, failed."""
+        ...
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Zamknij połączenie z backendem."""
         ...

@@ -81,6 +81,34 @@ services:
     networks:
       - fasthub-network
 
+  # ===== ARQ WORKER (background tasks) =====
+  worker:
+    build:
+      context: ./fasthub-backend
+      dockerfile: Dockerfile
+    container_name: fasthub-worker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fasthub
+      REDIS_URL: redis://redis:6379/0
+      TASK_BACKEND: arq
+      SECRET_KEY: your-secret-key-change-in-production
+      ENVIRONMENT: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./fasthub-backend:/app
+      - /app/venv
+    command: >
+      sh -c "
+        echo 'Starting ARQ worker...' &&
+        arq fasthub_core.tasks.worker.BaseWorkerSettings
+      "
+    networks:
+      - fasthub-network
+
   # ===== FRONTEND (React + Vite) =====
   frontend:
     build:

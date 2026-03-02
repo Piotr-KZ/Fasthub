@@ -64,9 +64,12 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_KEY_PREFIX: str = "fasthub"  # Prefix for all Redis keys (override per app)
 
-    # Celery (optional)
-    CELERY_BROKER_URL: Optional[str] = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: Optional[str] = "redis://localhost:6379/0"
+    # Task Queue (Background Tasks)
+    TASK_BACKEND: str = "arq"  # "arq" | "celery" | "sync"
+    ARQ_REDIS_URL: Optional[str] = None  # None = użyj REDIS_URL
+    ARQ_MAX_JOBS: int = 10
+    ARQ_JOB_TIMEOUT: int = 120  # sekundy
+    ARQ_MAX_TRIES: int = 3
 
     # Fakturownia
     FAKTUROWNIA_API_TOKEN: Optional[str] = None

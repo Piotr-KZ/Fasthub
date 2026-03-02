@@ -346,8 +346,25 @@ Logowanie / Rejestracja
 - **Testy e2e AutoFlow + fasthub_core** — 43 testy integracyjne
 - Pokrycie: encryption, event bus, OAuth, webhooks, billing, manifest, cross-module
 
+### Gotowe (Faza 4 — Briefs 13-15)
+- **Logging** — structlog (JSON prod, colored dev)
+- **Monitoring** — Sentry (opcjonalny, PII filter)
+- **Rate Limiting** — slowapi (Redis/memory, preset limits)
+- **Health Checks** — /health, /ready, custom checks
+- **Subscription Check** — middleware sprawdzajacy aktywna subskrypcje
+- **File Storage** — Local + S3 (przylaczalny backend)
+- **Feature Flags** — check_feature, require_feature, get_plan_features
+- **Background Tasks** — przelaczalny task queue (ARQ/Sync/Celery future)
+- **Email Queue** — wyslij email w tle zamiast synchronicznie
+- **Maintenance Cron** — automatyczne czyszczenie tokenow, audit, notyfikacji, reset usage
+- 292 testow fasthub_core + 43 testy e2e AutoFlow
+
 ### Planowane
 - Brief 11: Thin wrappery w AutoFlow (zamiana lokalnych kopii na import z fasthub_core)
+- Brief 16: Stripe Webhook Handler (pelny lifecycle platnosci)
+- Brief 17: Multi-tenancy Middleware + CLI
+- Brief 18: Data Export (GDPR)
+- Brief 19: Email Templates + Invitations
 - Szablony HTML emaili (zamiast plain text)
 - WebSocket skalowanie (Redis pub/sub dla multi-server)
 - Dashboard metryki biznesowe
@@ -357,7 +374,7 @@ Logowanie / Rejestracja
 ## Wartosc biznesowa FastHub
 
 1. **Oszczednosc czasu:** Nowa aplikacja SaaS startuje w dni, nie miesiace
-2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (227+ testow: 184 fasthub_core + 43 e2e AutoFlow)
+2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (335+ testow: 292 fasthub_core + 43 e2e AutoFlow)
 3. **Bezpieczenstwo z automatu:** Bez dodatkowej pracy — szyfrowanie, uprawnienia, audit
 4. **Elastycznosc:** Kazdy modul mozna wymienic lub rozszerzyc niezaleznie
 5. **Skalowalnosc:** System gotowy na wzrost — od startupu do enterprise
@@ -365,5 +382,35 @@ Logowanie / Rejestracja
 
 ---
 
-*Dokument przygotowany 2026-03-01*
+---
+
+## Przelaczalne komponenty (Pluggable Components)
+
+FastHub stosuje wzorzec wymiennych komponentow — jedna zmienna env przelacza backend:
+
+| Komponent | Interfejs (ABC) | Implementacje | Config |
+|---|---|---|---|
+| Email | EmailTransport | SMTP, Console | SMTP_HOST (auto-detect) |
+| Storage | StorageBackend | Local, S3 | STORAGE_BACKEND / AWS_S3_BUCKET |
+| Task Queue | TaskQueueBackend | **ARQ, Sync** (Celery future) | **TASK_BACKEND** |
+| Auth | AuthContract | FastHubAuth | contracts_impl.py |
+
+### Diagram Task Queue
+
+```
+Aplikacja (AutoFlow)
+    | enqueue_task()
+TaskManager (singleton)
+    | get_task_manager()
+Factory: create_backend(config.TASK_BACKEND)
+    |-- "arq"    -> ARQBackend    -> Redis
+    |-- "sync"   -> SyncBackend   -> natychmiast
+    +-- "celery" -> CeleryBackend -> Redis/RabbitMQ (przyszlosc)
+```
+
+Wzorzec jest spojny: ABC -> implementacje -> factory z config -> singleton manager -> helpery.
+
+---
+
+*Dokument zaktualizowany 2026-03-02*
 *FastHub v2.0-alpha*

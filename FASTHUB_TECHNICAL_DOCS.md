@@ -698,7 +698,7 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 
 ## 13. Testy
 
-### fasthub_core (tests/) — 184 testow
+### fasthub_core (tests/) — 292 testow
 | Plik | Ilosc | Zakres |
 |------|-------|--------|
 | test_contracts.py | 17 | Kontrakty API |
@@ -715,6 +715,9 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 | test_integrations_webhooks.py | 10 | Webhooks (HMAC, dedup) |
 | test_billing_system.py | 14 | Billing (models, service, middleware) |
 | test_security_headers_comparison.py | 1 | Security headers |
+| test_production_infrastructure.py | ~20 | Logging, monitoring, rate limiting, health |
+| test_storage_feature_flags.py | ~34 | File storage, feature flags |
+| test_background_tasks.py | 53 | Task queue, backends, manager, helpers, worker |
 
 ### AutoFlow — testy e2e (Brief 12) — 43 testy
 | Sekcja | Ilosc | Zakres |
@@ -762,3 +765,162 @@ cd ../autoflow && python -m pytest tests/test_fasthub_e2e.py -v  # 43 testy
 - **18 tabel w Base.metadata** — 13 oryginalnych + 5 nowych billing (billing_plans, billing_addons, tenant_addons, usage_records, billing_events)
 - **Billing models uzywaja Integer PK** (nie UUID) — BillingPlan, BillingAddon, TenantAddon, UsageRecord, BillingEvent dziedzicza z Base, nie z BaseModel
 - **AutoFlow manifest** — 22 permissions, 4 role, 19 event types, 7 billing resources
+- **Task Queue fallback** — jesli ARQ/Redis niedostepny, automatyczny fallback na SyncBackend (natychmiastowe wykonanie)
+- **ARQ lazy pool** — polaczenie z Redis tworzone dopiero przy pierwszym enqueue(), nie przy starcie
+- **19 tabel w Base.metadata** — 13 oryginalnych + 5 billing + 1 file_uploads
+
+---
+
+## 15. Przelaczalne komponenty (Pluggable Components)
+
+FastHub stosuje wzorzec wymiennych komponentow. Kazdy komponent ma:
+1. **Interfejs (ABC)** — co komponent MUSI umiec
+2. **Implementacje** — konkretne backendy (min. 2)
+3. **Factory** — auto-detect z configu
+4. **Config** — jedna zmienna env przelacza backend
+
+### Lista komponentow
+
+| Komponent | Interfejs (ABC) | Implementacje | Config | Plik |
+|---|---|---|---|---|
+| Email | `EmailTransport` | SMTPTransport, ConsoleTransport | `SMTP_HOST` (auto) | `notifications/email_transport.py` |
+| Storage | `StorageBackend` | LocalBackend, S3Backend | `STORAGE_BACKEND` / `AWS_S3_BUCKET` | `storage/backends.py` |
+| Task Queue | `TaskQueueBackend` | ARQBackend, SyncBackend | `TASK_BACKEND=arq\|sync` | `tasks/backends/` |
+| Auth | `AuthContract` | FastHubAuth | `contracts_impl.py` | `contracts.py` |
+| Billing | `BillingContract` | FastHubBilling | `contracts_impl.py` | `contracts.py` |
+
+### Jak przelaczac backend
+
+**Email:**
+```env
+# SMTP (produkcja) — automatycznie gdy SMTP_HOST ustawiony
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+
+# Console (dev) — automatycznie gdy brak SMTP_HOST
+# Emaile logowane w konsoli zamiast wyslane
+```
+
+**Storage:**
+```env
+# Local (dev) — pliki w ./uploads/
+STORAGE_BACKEND=local
+
+# S3 (produkcja) — automatycznie gdy AWS_S3_BUCKET ustawiony
+AWS_S3_BUCKET=my-app-uploads
+AWS_S3_REGION=eu-central-1
+# Kompatybilne: DigitalOcean Spaces, Wasabi, MinIO (zmien endpoint)
+AWS_S3_ENDPOINT_URL=https://ams3.digitaloceanspaces.com
+```
+
+**Task Queue:**
+```env
+# ARQ (produkcja) — wymaga Redis
+TASK_BACKEND=arq
+REDIS_URL=redis://localhost:6379/0
+
+# Sync (dev bez Redisa) — taski wykonywane natychmiast
+TASK_BACKEND=sync
+
+# Celery (przyszlosc) — gdy potrzeba skali/monitoringu
+TASK_BACKEND=celery
+```
+
+### Jak dodac nowy backend
+
+1. Stworz klase dziedziczaca po odpowiednim ABC
+2. Zaimplementuj wszystkie metody (@abstractmethod)
+3. Zarejestruj w factory (manager.py / create_backend())
+4. Dodaj wartosc do config
+
+Przyklad — dodanie CeleryBackend:
+```python
+# fasthub_core/tasks/backends/celery_backend.py
+from fasthub_core.tasks.base import TaskQueueBackend
+
+class CeleryBackend(TaskQueueBackend):
+    async def enqueue(self, task_name, **kwargs):
+        # Celery implementation
+        ...
+    # ... reszta metod
+```
+Potem w `manager.py` -> `create_backend()` dodaj obsluge `"celery"`.
+
+### Zasada dla aplikacji
+
+Aplikacja (np. AutoFlow) NIGDY nie importuje backendu bezposrednio.
+Zawsze uzywa publicznego API:
+
+```python
+# TAK — backend-agnostic
+from fasthub_core.tasks import enqueue_task, enqueue_email
+await enqueue_email(to="jan@firma.pl", subject="Witaj", body="...")
+
+# NIE — powiazanie z konkretnym backendem
+from arq import create_pool  # NIGDY w kodzie aplikacji
+```
+
+---
+
+## 16. Background Tasks (Brief 15)
+
+### Architektura
+
+```
+Aplikacja (AutoFlow)
+    | enqueue_task()
+TaskManager (singleton)
+    | get_task_manager()
+Factory: create_backend(config.TASK_BACKEND)
+    |-- "arq"    -> ARQBackend    -> Redis
+    |-- "sync"   -> SyncBackend   -> natychmiast
+    +-- "celery" -> CeleryBackend -> Redis/RabbitMQ (przyszlosc)
+```
+
+### Pliki
+
+| Plik | Opis |
+|------|------|
+| `tasks/base.py` | TaskQueueBackend (ABC) — kontrakt |
+| `tasks/backends/arq_backend.py` | ARQBackend — produkcja (async, Redis) |
+| `tasks/backends/sync_backend.py` | SyncBackend — dev/testy (natychmiast) |
+| `tasks/manager.py` | Factory + singleton + auto-detect z config |
+| `tasks/enqueue.py` | enqueue_task(), enqueue_email() — publiczne API |
+| `tasks/worker.py` | BaseWorkerSettings — extensible ARQ config |
+| `tasks/email_tasks.py` | send_email_task (retry 3x) |
+| `tasks/maintenance_tasks.py` | 4 cron tasks (tokeny, usage, audit, notyfikacje) |
+
+### Maintenance cron jobs
+
+| Task | Harmonogram | Opis |
+|------|-------------|------|
+| cleanup_expired_tokens | co godzine (:15) | Wygasle tokeny JWT z blacklisty |
+| reset_monthly_usage | 1-szego o 0:05 | Reset miesiecnych counterow billing |
+| cleanup_old_audit_entries | niedziela 3:00 | Stare wpisy audytu (>180 dni) |
+| cleanup_old_notifications | niedziela 4:00 | Przeczytane notyfikacje (>90 dni) |
+
+### Config
+
+| Zmienna | Domyslna | Opis |
+|---------|----------|------|
+| TASK_BACKEND | arq | Backend: arq, celery, sync |
+| ARQ_REDIS_URL | None (uzyj REDIS_URL) | Dedykowany Redis URL dla ARQ |
+| ARQ_MAX_JOBS | 10 | Max rownoczesnych taskow |
+| ARQ_JOB_TIMEOUT | 120 | Timeout taska (sekundy) |
+| ARQ_MAX_TRIES | 3 | Max prob przed failure |
+
+### Testy: 53
+
+| Klasa | Ilosc | Zakres |
+|-------|-------|--------|
+| TestTaskQueueContract | 6 | ABC contract |
+| TestTaskQueueContractInContracts | 2 | contracts.py |
+| TestSyncBackend | 7 | SyncBackend (execute, stats, close) |
+| TestARQBackend | 4 | ARQBackend (contract, lazy pool) |
+| TestTaskManager | 6 | Factory, singleton, close |
+| TestEnqueueHelpers | 4 | enqueue_task, enqueue_email, fallback |
+| TestWorkerConfig | 9 | BaseWorkerSettings, redis, cron |
+| TestEmailTask | 3 | send_email_task, transport mock |
+| TestMaintenanceTasks | 5 | Graceful bez DB |
+| TestTaskConfig | 4 | Config TASK_BACKEND, ARQ_* |
+| TestExports | 3 | Public API exports |

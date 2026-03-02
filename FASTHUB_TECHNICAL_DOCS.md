@@ -1,6 +1,6 @@
 # FastHub — Dokumentacja Techniczna
 
-> Dla AI agentow i programistow. Ostatnia aktualizacja: 2026-03-01.
+> Dla AI agentow i programistow. Ostatnia aktualizacja: 2026-03-02.
 
 ---
 
@@ -94,10 +94,14 @@ Fasthub/
 │   ├── rbac/                  # Role, Permission, RBACService
 │   ├── audit/                 # AuditLog, AuditService
 │   ├── admin/                 # Super Admin dashboard
-│   ├── billing/               # Subscription, Invoice
+│   ├── billing/               # Subscription, Invoice, BillingPlan, BillingService, middleware, API
 │   ├── notifications/         # In-app + email, preferencje
 │   ├── realtime/              # WebSocket ConnectionManager
 │   ├── middleware/             # Security headers, Request ID
+│   ├── infrastructure/        # Redis service (pool, cache, pub/sub, health)
+│   ├── events/                # Event Bus (emit, wildcard handlers, Redis broadcast)
+│   ├── security/              # Encryption (Fernet AES, key rotation, masking)
+│   ├── integrations/          # OAuth (PKCE), Webhooks (HMAC signatures)
 │   └── db/                    # Async session, BaseModel
 │
 └── tests/                     # Testy fasthub_core
@@ -162,6 +166,10 @@ Tabela: subscriptions
 - current_period_start, current_period_end: DateTime
 - cancel_at_period_end: Boolean
 - canceled_at: DateTime
+- plan_id: Integer (FK → BillingPlan, nullable)
+- billing_interval: String (monthly | yearly, nullable)
+- trial_end: DateTime (nullable)
+- stripe_customer_id: String (nullable)
 ```
 
 ### 4.5 Invoice
@@ -235,6 +243,78 @@ Tabela: api_tokens
 - token_hash: String (unique, indexed)
 - name: String
 - last_used_at, expires_at: DateTime
+```
+
+### 4.11 BillingPlan (Brief 10)
+```
+Tabela: billing_plans
+- id: Integer (PK, auto)
+- slug: String(50) (unique, indexed)
+- name: String(100)
+- description: Text
+- billing_mode: String(20) (default: "fixed")
+- price_monthly, price_yearly: Float
+- currency: String(3) (default: "PLN")
+- stripe_price_monthly_id, stripe_price_yearly_id, stripe_product_id: String(100)
+- max_processes, max_executions_month, max_integrations: Integer
+- max_ai_operations_month, max_team_members, max_file_storage_mb: Integer
+- features: JSON
+- sort_order: Integer, badge: String(50), color: String(7)
+- is_active, is_default, is_visible: Boolean
+- created_at, updated_at: DateTime
+```
+
+### 4.12 BillingAddon (Brief 10)
+```
+Tabela: billing_addons
+- id: Integer (PK, auto)
+- slug: String(50) (unique, indexed)
+- name: String(100), description: Text
+- resource_type: String(50) — typ zasobu (processes, executions, storage)
+- quantity: Integer
+- price_monthly, price_yearly: Float
+- currency: String(3) (default: "PLN")
+- stripe_price_monthly_id, stripe_price_yearly_id, stripe_product_id: String(100)
+- available_for_plans: JSON — lista planow dla ktorych addon dostepny
+- max_quantity_per_tenant: Integer
+- sort_order: Integer, is_active: Boolean
+- created_at: DateTime
+```
+
+### 4.13 TenantAddon (Brief 10)
+```
+Tabela: tenant_addons
+- id: Integer (PK, auto)
+- tenant_id: String(100) (indexed)
+- addon_id: Integer (FK → BillingAddon)
+- quantity: Integer
+- is_active: Boolean
+- stripe_subscription_item_id: String(100)
+- created_at, expires_at: DateTime
+```
+
+### 4.14 UsageRecord (Brief 10)
+```
+Tabela: usage_records
+- id: Integer (PK, auto)
+- tenant_id: String(100) (indexed)
+- period: String(7) (indexed, format: "2026-03")
+- executions_count, ai_operations_count: Integer
+- active_processes_count, active_integrations_count: Integer
+- storage_used_mb: Float
+- webhook_calls_count: Integer
+- created_at, updated_at: DateTime
+```
+
+### 4.15 BillingEvent (Brief 10)
+```
+Tabela: billing_events
+- id: Integer (PK, auto)
+- tenant_id: String(100) (indexed)
+- event_type: String(100) (indexed)
+- stripe_event_id: String(100) (unique)
+- data: JSON
+- created_at: DateTime
 ```
 
 ---
@@ -336,6 +416,17 @@ Tabela: api_tokens
 | GET | `/api/v1/invoices/{id}/pdf` | PDF faktury |
 | GET | `/api/v1/subscription/status` | Status subskrypcji |
 
+### 5.11 Billing System (Brief 10 — fasthub_core)
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/billing/subscription` | Subskrypcja tenanta + plan + limity |
+| GET | `/billing/usage` | Zuzycie zasobow (biezacy okres) |
+| POST | `/billing/checkout` | Utworz Stripe Checkout session |
+| POST | `/billing/portal` | Utworz Stripe Customer portal |
+| POST | `/billing/webhook` | Stripe webhook handler |
+| GET | `/catalog/plans` | Lista dostepnych planow |
+| GET | `/catalog/addons` | Lista dostepnych addonow |
+
 ### 5.11 Health
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
@@ -354,7 +445,8 @@ Kontrakty to abstrakcyjne interfejsy — "obietnice" ktore FastHub gwarantuje ka
 | **AuthContract** | hash_password, verify_password, create_access_token, create_refresh_token, decode_token, blacklist_token, is_token_blacklisted | FastHubAuth — pelna |
 | **UserContract** | get_current_user, get_user, list_organization_users, get_user_role | FastHubUser — pelna |
 | **PermissionContract** | check_permission, get_user_permissions | FastHubPermission — RBAC |
-| **BillingContract** | get_subscription, check_limit, record_usage | FastHubBilling — czesciowa (limity w v2.0) |
+| **BillingContract** | get_subscription, check_limit, record_usage | FastHubBilling — pelna (BillingService z Brief 10) |
+| **EventBusContract** | emit, on, off | FastHubEventBus — pelna (deleguje do EventBus z Brief 10) |
 | **AuditContract** | log_action, get_audit_logs | FastHubAudit — pelna |
 | **NotificationContract** | send_notification, send_email | FastHubNotification — pelna |
 | **DatabaseContract** | get_db_session, get_engine | FastHubDatabase — pelna |
@@ -396,6 +488,56 @@ Kontrakty to abstrakcyjne interfejsy — "obietnice" ktore FastHub gwarantuje ka
 - send_to_user, broadcast_to_organization, broadcast_all
 - Automatyczny cleanup martwych polaczen
 - Singleton: get_connection_manager()
+
+### 7.6 Redis Service (fasthub_core/infrastructure — Brief 10)
+- Connection pool singleton: get_redis(), close_redis()
+- Health check: redis_health_check()
+- Pub/Sub: publish_event(), subscribe_events()
+- Cache: set_cache(), get_cache(), delete_cache(), clear_cache_pattern()
+- AI Cache: get_ai_cache(), set_ai_cache()
+- Konfigurowalny prefix kluczy (REDIS_KEY_PREFIX)
+- Graceful degradation — zwraca None/False gdy Redis niedostepny
+
+### 7.7 Event Bus (fasthub_core/events — Brief 10)
+- Klasa Event z event_type, payload, timestamp, source
+- Wildcard matching (fnmatch): "execution.*" lapie execution.started, execution.failed
+- Metody: on() decorator, register(), unregister(), emit(), emit_many(), get_stats()
+- Redis broadcast (best-effort, non-blocking)
+- Singleton: event_bus = EventBus()
+- FastHubEventBus deleguje do event_bus (kontrakt)
+
+### 7.8 Encryption Service (fasthub_core/security — Brief 10)
+- encrypt_credentials() — Fernet AES, zwraca "ENC:{encrypted}" lub plain JSON fallback
+- decrypt_credentials() — obsluguje oba formaty
+- rotate_encryption_key() — re-szyfrowanie z nowym kluczem
+- generate_key() — generacja klucza Fernet
+- mask_credentials() — maskowanie wartosci dla logow
+- is_encryption_available() — sprawdza czy klucz skonfigurowany
+- Klucz: FASTHUB_SECRET_KEY env var
+
+### 7.9 OAuth Manager (fasthub_core/integrations — Brief 10)
+- OAuthConfig z PKCE support
+- OAuthTokens z is_expired(), should_refresh(), to_dict(), from_dict()
+- OAuthManager: get_authorization_url(), exchange_code(), refresh_tokens()
+- TokenStorage ABC + MemoryTokenStorage + DatabaseTokenStorage
+- PKCE: S256 code challenge method
+- Multi-provider izolacja tokenow
+
+### 7.10 Webhook Base (fasthub_core/integrations — Brief 10)
+- SignatureVerifier: compute_signature(), verify_signature()
+- 3 metody: HMAC-SHA256, HMAC-SHA1, HMAC-MD5
+- WebhookConfig, WebhookEvent, WebhookRegistration
+- MemoryWebhookStorage z deduplication
+- WebhookStatus enum: ACTIVE, INACTIVE, FAILED
+
+### 7.11 Billing Service (fasthub_core/billing — Brief 10)
+- BillingService z 27 metodami: plans CRUD, limits, usage, subscriptions, addons, Stripe
+- enforce_limit() — middleware HTTP 402 przy przekroczeniu limitu
+- require_limit(resource) — FastAPI Depends factory
+- API endpoints: /billing/subscription, /billing/usage, /billing/checkout, /billing/portal, /billing/webhook
+- Catalog endpoints: /catalog/plans, /catalog/addons
+- seed_billing_plans() — inicjalizacja domyslnych planow
+- RESOURCE_LIMIT_MAP i RESOURCE_USAGE_MAP — mapowanie zasobow na pola w DB
 
 ---
 
@@ -556,7 +698,7 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 
 ## 13. Testy
 
-### fasthub_core (tests/)
+### fasthub_core (tests/) — 184 testow
 | Plik | Ilosc | Zakres |
 |------|-------|--------|
 | test_contracts.py | 17 | Kontrakty API |
@@ -566,6 +708,25 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 | test_auth_improvements.py | ~10 | Auth (blacklist, validation, email) |
 | test_notifications.py | 20 | Powiadomienia |
 | test_realtime_security.py | 22 | WebSocket, middleware |
+| test_infrastructure_redis.py | 7 | Redis service (graceful degradation) |
+| test_events_bus.py | 12 | Event Bus (wildcard, multi-handler) |
+| test_security_encryption.py | 8 | Encryption (round-trip, rotation, masking) |
+| test_integrations_oauth.py | 12 | OAuth (PKCE, tokens, storage) |
+| test_integrations_webhooks.py | 10 | Webhooks (HMAC, dedup) |
+| test_billing_system.py | 14 | Billing (models, service, middleware) |
+| test_security_headers_comparison.py | 1 | Security headers |
+
+### AutoFlow — testy e2e (Brief 12) — 43 testy
+| Sekcja | Ilosc | Zakres |
+|--------|-------|--------|
+| TestEncryptionE2E | 4 | Pelny cykl szyfrowania, rotacja, masking |
+| TestEventBusE2E | 6 | Emit, wildcard, izolacja, multi-handler |
+| TestOAuthE2E | 6 | PKCE, storage, expiry, serialization |
+| TestWebhooksE2E | 5 | HMAC, tamper detection, dedup |
+| TestBillingE2E | 6 | Modele, service, middleware |
+| TestManifestE2E | 8 | Walidacja, role, hierarchia, eventy, resources |
+| TestCrossModuleE2E | 3 | Encrypted OAuth tokens, webhook+event flow |
+| TestHealthAndStartup | 5 | Importy, wersja, eksporty |
 
 ### fasthub-backend (tests/)
 | Folder | Testy |
@@ -576,10 +737,13 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 **Uruchamianie:**
 ```bash
 # fasthub_core
-python -m pytest tests/ -v
+python -m pytest tests/ -v  # 184 testow
 
 # fasthub-backend
 cd fasthub-backend && python -m pytest tests/ -v
+
+# AutoFlow e2e
+cd ../autoflow && python -m pytest tests/test_fasthub_e2e.py -v  # 43 testy
 ```
 
 ---
@@ -591,4 +755,10 @@ cd fasthub-backend && python -m pytest tests/ -v
 - **ConnectionManager jest in-memory** — dziala na jednym serwerze. Multi-server wymaga Redis pub/sub (v2.1+)
 - **HSTS domyslnie wylaczony** — wlaczyc dopiero gdy SSL skonfigurowany
 - **Migracje** uruchamiaja sie automatycznie na starcie aplikacji (alembic upgrade head)
-- **fasthub_core nie jest importowany przez fasthub-backend** — to oddzielny pakiet do reuse
+- **fasthub_core jest importowany przez fasthub-backend** — thin wrapper pattern (modele, config, session)
+- **Redis graceful degradation** — gdy Redis niedostepny, fallback na InMemory (blacklist, cache)
+- **Event Bus Redis broadcast** — best-effort, non-blocking (nie blokuje jesli Redis offline)
+- **Encryption fallback** — jesli brak FASTHUB_SECRET_KEY, credentials zapisywane jako plain JSON (nie crash)
+- **18 tabel w Base.metadata** — 13 oryginalnych + 5 nowych billing (billing_plans, billing_addons, tenant_addons, usage_records, billing_events)
+- **Billing models uzywaja Integer PK** (nie UUID) — BillingPlan, BillingAddon, TenantAddon, UsageRecord, BillingEvent dziedzicza z Base, nie z BaseModel
+- **AutoFlow manifest** — 22 permissions, 4 role, 19 event types, 7 billing resources

@@ -1,7 +1,7 @@
 # FastHub — Architektura Systemu
 
 > Dokument biznesowy dla wlasciciela i partnerow.
-> Wersja: 1.0 | Data: 2026-03-01
+> Wersja: 2.0 | Data: 2026-03-02
 
 ---
 
@@ -145,11 +145,18 @@ Organizacja "Budimex Sp. z o.o."
 
 ### 5. Platnosci i faktury
 
-**Co to daje:** Organizacja moze wybrać plan (darmowy, pro, enterprise), oplacac subskrypcje, przegladac faktury.
+**Co to daje:** Organizacja moze wybrać plan (darmowy, pro, enterprise), oplacac subskrypcje, przegladac faktury. System automatycznie kontroluje limity i ostrzega przed ich przekroczeniem.
 
 **Integracje:**
-- **Stripe** — obsluga platnosci kartą, subskrypcje, webhooks
+- **Stripe** — obsluga platnosci karta, subskrypcje, webhooks, checkout session, customer portal
 - **Fakturownia** — generowanie polskich faktur VAT
+
+**Plany i limity (Brief 10):**
+- Kazdy plan definiuje: max procesow, max wykonan/miesiac, max integracji, max operacji AI, max czlonkow, max storage
+- Waluta domyslna: PLN (polski rynek)
+- Add-ony: paczki dodatkowych zasobow (np. +100 wykonan)
+- Usage tracking: automatyczne liczenie zuzycia per miesiac
+- Middleware: enforce_limit() blokuje z HTTP 402 gdy limit przekroczony
 
 **Statusy subskrypcji:**
 - Aktywna — wszystko dziala
@@ -192,7 +199,57 @@ Organizacja "Budimex Sp. z o.o."
 
 ---
 
-### 8. Warstwa bezpieczenstwa
+### 8. Szyfrowanie danych (Brief 10)
+
+**Co to daje:** Klucze API, tokeny OAuth i inne wrazliwe dane sa szyfrowane w bazie. Nawet jesli ktos uzyska dostep do bazy — nie odczyta sekretow.
+
+**Jak to dziala:**
+- Dane szyfrowane algorytmem Fernet (AES-128-CBC)
+- Zaszyfrowane wartosci zaczynaja sie od "ENC:" — latwo je odroznic
+- Admin moze zrotowac klucz szyfrowania — stare dane automatycznie przenoszone na nowy klucz
+- W logach wrazliwe pola sa maskowane: "sk-very-***"
+- Jesli klucz nie jest skonfigurowany — dane zapisywane jako plain JSON (nie crash, ale bez szyfrowania)
+
+---
+
+### 9. Magistrala zdarzen (Event Bus — Brief 10)
+
+**Co to daje:** Rozne czesci systemu moga reagowac na zdarzenia — np. kiedy proces sie zakonczy, system automatycznie wysyla powiadomienie i aktualizuje statystyki.
+
+**Jak to dziala:**
+- Modul emituje zdarzenie: "execution.completed" z danymi
+- Inne moduly sluchaja na wzorce: "execution.*" lapie wszystkie zdarzenia wykonania
+- Kazdy handler reaguje niezaleznie — jeden wysyla email, drugi zapisuje statystyki
+- Zdarzenia sa broadcastowane przez Redis (jesli dostepny) — dzialaja miedzy serwerami
+
+**Przyklad:**
+```
+Proces zakonczony → Event: "execution.completed"
+  ├── Handler 1: Aktualizuj statystyki zuzycia
+  ├── Handler 2: Wyslij powiadomienie do uzytkownika
+  └── Handler 3: Sprawdz czy nie przekroczono limitu
+```
+
+---
+
+### 10. Integracje zewnetrzne (OAuth + Webhooks — Brief 10)
+
+**Co to daje:** Gotowy mechanizm podlaczania zewnetrznych uslug (Google, Microsoft, Stripe) — autoryzacja OAuth i obsluga webhookow.
+
+**OAuth:**
+- Wsparcie PKCE (bezpieczniejszy flow autoryzacji)
+- Automatyczne odswiezanie tokenow gdy wygasna
+- Multi-provider: mozna podlaczyc Google, Microsoft, itp. niezaleznie
+- Tokeny szyfrowane przed zapisem do bazy
+
+**Webhooks:**
+- Weryfikacja podpisow HMAC (SHA256, SHA1, MD5)
+- Ochrona przed zmodyfikowanym payloadem
+- Deduplication — ten sam event nie jest przetworzony dwa razy
+
+---
+
+### 11. Warstwa bezpieczenstwa
 
 **Co to daje:** Ochrona przed typowymi atakami internetowymi — automatycznie, bez konfiguracji.
 
@@ -266,7 +323,7 @@ Logowanie / Rejestracja
 
 ## Co jest gotowe, a co w planach
 
-### Gotowe (Faza 1)
+### Gotowe (Faza 1 — Briefs 1-9)
 - Logowanie, rejestracja, weryfikacja email, reset hasla
 - Organizacje i zespoly z rolami
 - Zaawansowane uprawnienia (RBAC)
@@ -274,22 +331,33 @@ Logowanie / Rejestracja
 - Pelny dziennik zmian (audit trail)
 - Powiadomienia in-app + email
 - WebSocket (komunikacja w czasie rzeczywistym)
-- Middleware bezpieczenstwa
-- 100+ testow automatycznych
+- Middleware bezpieczenstwa (headers, request ID)
 
-### Planowane (Faza 2)
-- Przeniesienie modulow z AutoFlow do FastHub
+### Gotowe (Faza 2 — Brief 10)
+- **Redis Service** — shared connection pool, cache, pub/sub, health check
+- **Event Bus** — wildcard matching, multi-handler, Redis broadcast
+- **Encryption** — Fernet AES, key rotation, credential masking
+- **OAuth Base** — PKCE, multi-provider, token storage
+- **Webhook Base** — HMAC signatures (SHA256/SHA1/MD5), deduplication
+- **Billing System** — plany, addony, usage tracking, Stripe checkout/portal, limity
+- 184 testow fasthub_core + 43 testy e2e AutoFlow (Brief 12)
+
+### Gotowe (Faza 3 — Brief 12)
+- **Testy e2e AutoFlow + fasthub_core** — 43 testy integracyjne
+- Pokrycie: encryption, event bus, OAuth, webhooks, billing, manifest, cross-module
+
+### Planowane
+- Brief 11: Thin wrappery w AutoFlow (zamiana lokalnych kopii na import z fasthub_core)
 - Szablony HTML emaili (zamiast plain text)
-- WebSocket skalowanie (Redis pub/sub)
+- WebSocket skalowanie (Redis pub/sub dla multi-server)
 - Dashboard metryki biznesowe
-- Integracja Stripe webhooks w fasthub_core
 
 ---
 
 ## Wartosc biznesowa FastHub
 
 1. **Oszczednosc czasu:** Nowa aplikacja SaaS startuje w dni, nie miesiace
-2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (100+ testow)
+2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (227+ testow: 184 fasthub_core + 43 e2e AutoFlow)
 3. **Bezpieczenstwo z automatu:** Bez dodatkowej pracy — szyfrowanie, uprawnienia, audit
 4. **Elastycznosc:** Kazdy modul mozna wymienic lub rozszerzyc niezaleznie
 5. **Skalowalnosc:** System gotowy na wzrost — od startupu do enterprise

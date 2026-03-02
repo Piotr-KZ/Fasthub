@@ -40,7 +40,7 @@ from fasthub_core.auth.service import (
     decode_access_token,
     decode_refresh_token,
 )
-from fasthub_core.auth.token_blacklist import TokenBlacklist
+from fasthub_core.auth.blacklist import blacklist_token as _blacklist_token, is_token_blacklisted as _is_token_blacklisted
 from fasthub_core.db.session import get_db, get_engine
 from fasthub_core.users.models import User, Organization, Member, MemberRole
 from fasthub_core.audit.models import AuditLog
@@ -78,11 +78,16 @@ class FastHubAuth(AuthContract):
             result = decode_refresh_token(token)
         return result
 
-    def blacklist_token(self, token: str, expires_at: datetime) -> bool:
-        return TokenBlacklist.add_token(token, expires_at)
+    async def blacklist_token(self, token: str, expires_at: datetime) -> bool:
+        now = datetime.utcnow()
+        expires_in = max(int((expires_at - now).total_seconds()), 0)
+        if expires_in <= 0:
+            return False
+        await _blacklist_token(token, expires_in)
+        return True
 
-    def is_token_blacklisted(self, token: str) -> bool:
-        return TokenBlacklist.is_blacklisted(token)
+    async def is_token_blacklisted(self, token: str) -> bool:
+        return await _is_token_blacklisted(token)
 
 
 # ============================================================================

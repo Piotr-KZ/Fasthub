@@ -48,12 +48,12 @@ class AuthContract(ABC):
         ...
 
     @abstractmethod
-    def blacklist_token(self, token: str, expires_at: datetime) -> bool:
+    async def blacklist_token(self, token: str, expires_at: datetime) -> bool:
         """Unieważnia token (dodaje do czarnej listy w Redis)"""
         ...
 
     @abstractmethod
-    def is_token_blacklisted(self, token: str) -> bool:
+    async def is_token_blacklisted(self, token: str) -> bool:
         """Sprawdza czy token jest na czarnej liście"""
         ...
 

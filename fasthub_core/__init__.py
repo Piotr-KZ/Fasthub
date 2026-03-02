@@ -16,6 +16,7 @@ from fasthub_core.contracts import (
     NotificationContract,
     EventBusContract,
     DatabaseContract,
+    TaskQueueContract,
 )
 
 # Implementacje
@@ -62,11 +63,18 @@ from fasthub_core.billing.subscription_check import SubscriptionChecker, require
 from fasthub_core.storage import StorageService, FileUpload, get_storage_service
 from fasthub_core.billing.feature_flags import check_feature, require_feature, get_plan_features
 
+# Background Tasks (Brief 15)
+from fasthub_core.tasks import (
+    enqueue_task, enqueue_email,
+    get_task_manager, set_task_manager, close_task_manager,
+    TaskQueueBackend, BaseWorkerSettings,
+)
+
 __all__ = [
     "__version__",
     "AuthContract", "UserContract", "PermissionContract",
     "BillingContract", "AuditContract", "NotificationContract",
-    "EventBusContract", "DatabaseContract",
+    "EventBusContract", "DatabaseContract", "TaskQueueContract",
     "Settings", "get_settings", "get_db", "get_engine",
     "admin_router",
     "rbac_router", "RBACService", "require_permission",
@@ -87,4 +95,8 @@ __all__ = [
     # Brief 14 modules
     "StorageService", "FileUpload", "get_storage_service",
     "check_feature", "require_feature", "get_plan_features",
+    # Brief 15 modules
+    "enqueue_task", "enqueue_email",
+    "get_task_manager", "set_task_manager", "close_task_manager",
+    "TaskQueueBackend", "BaseWorkerSettings",
 ]

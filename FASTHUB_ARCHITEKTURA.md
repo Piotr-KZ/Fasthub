@@ -1,7 +1,7 @@
 # FastHub — Architektura Systemu
 
 > Dokument biznesowy dla wlasciciela i partnerow.
-> Wersja: 2.0 | Data: 2026-03-02
+> Wersja: 2.1 | Data: 2026-03-02
 
 ---
 
@@ -249,7 +249,42 @@ Proces zakonczony → Event: "execution.completed"
 
 ---
 
-### 11. Warstwa bezpieczenstwa
+### 11. Multi-tenancy — izolacja danych (Brief 17)
+
+**Co to daje:** Dane kazdej organizacji sa automatycznie odizolowane. Developer NIE musi recznie filtrowac danych — middleware robi to sam.
+
+**Jak to dziala:**
+- TenantMiddleware automatycznie wyciaga organizacje z tokenu JWT
+- Ustawia kontekst tenanta w ContextVar (async-safe)
+- Kazdy endpoint ma dostep do `get_current_tenant_id()` bez dodatkowego kodu
+- Helper `tenant_query()` automatycznie dodaje filtr `WHERE organization_id = X`
+
+**Przyklad:**
+```
+BEZ multi-tenancy: query = select(Process).where(Process.organization_id == org.id)  # RECZNE
+Z multi-tenancy:   query = tenant_query(select(Process), Process.organization_id)    # AUTOMATYCZNE
+```
+
+---
+
+### 12. CLI — narzedzia administracyjne (Brief 17)
+
+**Co to daje:** Developer ma gotowe komendy do zarzadzania systemem — seedowanie danych, tworzenie admina, diagnostyka.
+
+**Komendy:**
+| Komenda | Co robi |
+|---------|---------|
+| `fasthub seed` | Zaladuj plany billing + uprawnienia RBAC |
+| `fasthub create-admin` | Stworz pierwszego admina + organizacje |
+| `fasthub check` | Sprawdz DB, Redis, Stripe, Email, Storage |
+| `fasthub show-config` | Pokaz aktualna konfiguracje |
+| `fasthub shell` | Interaktywna konsola z modelami |
+
+**Rozszerzalnosc:** Aplikacja (np. AutoFlow) moze dodawac wlasne komendy do tego samego CLI.
+
+---
+
+### 13. Warstwa bezpieczenstwa
 
 **Co to daje:** Ochrona przed typowymi atakami internetowymi — automatycznie, bez konfiguracji.
 
@@ -346,8 +381,21 @@ Logowanie / Rejestracja
 - **Testy e2e AutoFlow + fasthub_core** — 43 testy integracyjne
 - Pokrycie: encryption, event bus, OAuth, webhooks, billing, manifest, cross-module
 
+### Gotowe (Faza 4 — Briefs 13-17)
+- **Structured Logging** — JSON w produkcji, kolorowy w dev (structlog)
+- **Monitoring** — Sentry z filtrami PII (opcjonalny)
+- **Rate Limiting** — per-endpoint, Redis/memory backend (slowapi)
+- **Subscription Check** — middleware, dekorator, HTTP 402 enforcement
+- **Health Checks** — /health, /ready, custom checks z timeoutem
+- **Multi-tenancy** — TenantMiddleware (auto JWT), ContextVar, tenant_query() (Brief 17)
+- **CLI** — fasthub seed/create-admin/check/show-config/shell (Typer, Brief 17)
+- 270+ testow fasthub_core (zero regresji)
+
 ### Planowane
 - Brief 11: Thin wrappery w AutoFlow (zamiana lokalnych kopii na import z fasthub_core)
+- Brief 18: Data Export (GDPR compliance)
+- Brief 19: Email Templates + Invitations
+- Brief 20: Polskie bramki platnosci (PayU, Tpay, P24)
 - Szablony HTML emaili (zamiast plain text)
 - WebSocket skalowanie (Redis pub/sub dla multi-server)
 - Dashboard metryki biznesowe
@@ -357,7 +405,7 @@ Logowanie / Rejestracja
 ## Wartosc biznesowa FastHub
 
 1. **Oszczednosc czasu:** Nowa aplikacja SaaS startuje w dni, nie miesiace
-2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (227+ testow: 184 fasthub_core + 43 e2e AutoFlow)
+2. **Sprawdzone rozwiazania:** Kazdy modul jest przetestowany (313+ testow: 270 fasthub_core + 43 e2e AutoFlow)
 3. **Bezpieczenstwo z automatu:** Bez dodatkowej pracy — szyfrowanie, uprawnienia, audit
 4. **Elastycznosc:** Kazdy modul mozna wymienic lub rozszerzyc niezaleznie
 5. **Skalowalnosc:** System gotowy na wzrost — od startupu do enterprise

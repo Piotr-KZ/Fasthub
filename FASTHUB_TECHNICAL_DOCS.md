@@ -698,7 +698,7 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 
 ## 13. Testy
 
-### fasthub_core (tests/) — 184 testow
+### fasthub_core (tests/) — 270+ testow
 | Plik | Ilosc | Zakres |
 |------|-------|--------|
 | test_contracts.py | 17 | Kontrakty API |
@@ -737,7 +737,7 @@ VITE_API_URL=https://api.fasthub.pl/api/v1
 **Uruchamianie:**
 ```bash
 # fasthub_core
-python -m pytest tests/ -v  # 184 testow
+python -m pytest tests/ -v  # 270+ testow
 
 # fasthub-backend
 cd fasthub-backend && python -m pytest tests/ -v
@@ -748,7 +748,86 @@ cd ../autoflow && python -m pytest tests/test_fasthub_e2e.py -v  # 43 testy
 
 ---
 
-## 14. Uwagi techniczne
+## 14. Multi-tenancy — izolacja danych miedzy organizacjami (Brief 17)
+
+### Jak to dziala
+
+1. User loguje sie -> JWT z user_id
+2. TenantMiddleware przechwytuje request -> znajduje organizacje usera -> ustawia TenantContext
+3. Kazdy serwis/endpoint ma dostep do `get_current_tenant_id()`
+4. Query filtrowane automatycznie (`tenant_query()`) lub recznie
+
+```
+Request (JWT) -> TenantMiddleware -> ContextVar(TenantContext) -> endpoint
+                                                                    |
+                                                         get_current_tenant_id()
+                                                                    |
+                                                     WHERE org_id = tenant_id
+```
+
+### Uzycie w endpointach
+
+```python
+# Opcja 1: Dependency (jawny, bezpieczny)
+@router.get("/data")
+async def get_data(tenant: TenantContext = Depends(require_tenant)):
+    query = select(X).where(X.organization_id == tenant.tenant_id)
+
+# Opcja 2: ContextVar (szybki, w serwisach)
+from fasthub_core.tenancy import get_current_tenant_id
+tenant_id = get_current_tenant_id()
+
+# Opcja 3: Helper (automatyczny filtr)
+from fasthub_core.tenancy.scoped import tenant_query
+query = tenant_query(select(Process), Process.organization_id)
+```
+
+### Publiczne endpointy (bez tenanta)
+
+TenantMiddleware automatycznie pomija:
+- /health, /ready, /metrics
+- /docs, /redoc, /openapi.json
+- /auth/login, /auth/register
+- /billing/webhooks
+
+Konfiguracja: `TenantMiddleware(app, excluded_paths=["/custom/public"])`
+
+### Pliki
+- `fasthub_core/tenancy/context.py` — TenantContext + ContextVar (set/get/clear)
+- `fasthub_core/tenancy/middleware.py` — TenantMiddleware (auto tenant z JWT)
+- `fasthub_core/tenancy/dependencies.py` — require_tenant, require_tenant_admin, get_tenant_db
+- `fasthub_core/tenancy/scoped.py` — tenant_query(), optional_tenant_query()
+
+---
+
+## 15. CLI — komendy administracyjne (Brief 17)
+
+```bash
+fasthub seed              # Zaladuj plany, role, uprawnienia
+fasthub create-admin      # Stworz pierwszego admina + organizacje
+fasthub check             # Sprawdz DB, Redis, Stripe, Email, Storage
+fasthub show-config       # Pokaz konfiguracje
+fasthub shell             # Interaktywna konsola z modelami
+```
+
+### Rozszerzanie CLI w aplikacji
+
+```python
+from fasthub_core.cli import app as cli_app
+
+@cli_app.command()
+def import_data(file: str):
+    typer.echo(f"Importing {file}...")
+```
+
+### Pliki
+- `fasthub_core/cli/app.py` — Typer app
+- `fasthub_core/cli/commands.py` — seed, create-admin, check, show-config, shell
+- `fasthub_core/cli/entry.py` — entry point (`fasthub` command)
+
+---
+
+## 16. Uwagi techniczne
 
 - **bcrypt 5.0 NIE dziala z passlib 1.7.4** — uzywac `bcrypt==4.1.2`
 - **WebSocket auth** przez query string `?token=JWT` (nie mozna ustawic Authorization header w WS)

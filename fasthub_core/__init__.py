@@ -62,6 +62,12 @@ from fasthub_core.billing.subscription_check import SubscriptionChecker, require
 from fasthub_core.storage import StorageService, FileUpload, get_storage_service
 from fasthub_core.billing.feature_flags import check_feature, require_feature, get_plan_features
 
+# Tenancy (Brief 17)
+from fasthub_core.tenancy import (
+    TenantMiddleware, get_current_tenant, get_current_tenant_id,
+    require_tenant, require_tenant_admin,
+)
+
 __all__ = [
     "__version__",
     "AuthContract", "UserContract", "PermissionContract",
@@ -87,4 +93,7 @@ __all__ = [
     # Brief 14 modules
     "StorageService", "FileUpload", "get_storage_service",
     "check_feature", "require_feature", "get_plan_features",
+    # Brief 17 modules
+    "TenantMiddleware", "get_current_tenant", "get_current_tenant_id",
+    "require_tenant", "require_tenant_admin",
 ]

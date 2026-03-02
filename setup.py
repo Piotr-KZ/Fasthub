@@ -29,5 +29,11 @@ setup(
         "slowapi>=0.1.9",
         "sentry-sdk[fastapi]>=1.40.0",
         "boto3>=1.34.0",
+        "typer[all]>=0.9.0",
     ],
+    entry_points={
+        "console_scripts": [
+            "fasthub = fasthub_core.cli.entry:main",
+        ],
+    },
 )

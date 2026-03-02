@@ -36,10 +36,10 @@ async def get_current_user(
     """
     token = credentials.credentials
 
-    # Check if token is blacklisted (SYNC - no await!)
-    from app.core.token_blacklist import TokenBlacklist
+    # Check if token is blacklisted (async via fasthub_core)
+    from fasthub_core.auth.blacklist import is_token_blacklisted
 
-    if TokenBlacklist.is_blacklisted(token):
+    if await is_token_blacklisted(token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has been revoked",

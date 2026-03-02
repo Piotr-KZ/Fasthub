@@ -193,9 +193,9 @@ async def change_password(
 
 
 @router.post("/logout", response_model=dict)
-def logout(request: Request, current_user: User = Depends(get_current_user)):
+async def logout(request: Request, current_user: User = Depends(get_current_user)):
     """
-    Logout user (SYNC version)
+    Logout user
 
     Invalidates the current access token by adding it to blacklist.
     Client should also delete stored tokens.
@@ -204,46 +204,33 @@ def logout(request: Request, current_user: User = Depends(get_current_user)):
     from datetime import datetime, timezone
 
     from app.core.security import decode_access_token
-    from app.core.token_blacklist import TokenBlacklist
+    from fasthub_core.auth.blacklist import blacklist_token
 
     logger = logging.getLogger(__name__)
 
     try:
-        # Get token from request
         auth_header = request.headers.get("Authorization")
-        logger.info(f"Logout: auth_header present: {bool(auth_header)}")
-        
         if not auth_header or not auth_header.startswith("Bearer "):
-            logger.warning("Logout: No valid auth header, returning success anyway")
             return {"message": "Successfully logged out"}
-        
-        token = auth_header.replace("Bearer ", "")
-        logger.info(f"Logout: token extracted, length: {len(token)}")
 
-        # Decode token to get expiration
+        token = auth_header.replace("Bearer ", "")
+
         payload = decode_access_token(token)
-        logger.info(f"Logout: payload decoded: {bool(payload)}, exp: {payload.get('exp') if payload else None}")
-        
         if not payload or not payload.get("exp"):
-            logger.warning("Logout: Invalid token payload, returning success anyway")
             return {"message": "Successfully logged out"}
-        
-        # Convert UTC timestamp to naive UTC datetime (not local time!)
+
         expires_at = datetime.fromtimestamp(payload["exp"], tz=timezone.utc).replace(tzinfo=None)
-        logger.info(f"Logout: calling add_token with expires_at={expires_at}")
-        
-        # Add token to blacklist (SYNC - no await!)
-        result = TokenBlacklist.add_token(token, expires_at)
-        logger.info(f"Logout: add_token result: {result}")
-        
-        if result:
-            logger.info(f"✅ User {current_user.email} logged out successfully")
+        now = datetime.utcnow()
+        expires_in = max(int((expires_at - now).total_seconds()), 0)
+
+        if expires_in > 0:
+            await blacklist_token(token, expires_in)
+            logger.info(f"User {current_user.email} logged out successfully")
         else:
-            logger.warning(f"⚠️ User {current_user.email} logged out but token not blacklisted (Redis issue)")
-            
+            logger.warning(f"User {current_user.email} logged out but token already expired")
+
     except Exception as e:
         logger.error(f"Logout error: {type(e).__name__}: {str(e)}", exc_info=True)
-        # Don't fail logout even if blacklist fails
 
     return {"message": "Successfully logged out"}
 
